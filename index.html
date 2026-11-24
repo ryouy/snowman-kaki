@@ -82,6 +82,15 @@ main.winter-demo{height:auto;min-height:100dvh;max-width:650px;overflow:visible;
 .winter-demo .ticks{display:none}
 .winter-demo .pill{padding:0;background:none;font-size:11px}
 .winter-demo #collect{padding:5px 12px;min-height:32px;font-size:12px;border-radius:7px}
+
+.winter-demo .dev{margin:4px 12px 0;padding:4px 0 5px;border-bottom:var(--soft-border)}
+.winter-demo .dev-caption{font-size:10px;color:var(--muted);line-height:1.3;margin-bottom:3px}
+.winter-demo .dev-body{display:grid;grid-template-columns:auto 52px auto minmax(0,1fr);gap:4px 6px;align-items:center;padding:0}
+.winter-demo .dev label{font-size:11px;white-space:nowrap}
+.winter-demo .dev select{min-width:0;min-height:28px;padding:2px 4px;font-size:12px}
+.winter-demo .devbuttons{grid-column:1/-1;margin:0;justify-content:flex-end;gap:5px}
+.winter-demo .devbuttons button{min-height:27px;padding:2px 9px;font-size:11px;white-space:nowrap}
+@media(min-width:580px){.winter-demo .dev-body{grid-template-columns:auto 52px auto minmax(0,1fr) auto}.winter-demo .devbuttons{grid-column:auto}}
 </style>
 <main class="scene winter-demo" data-slug="a">
   <header class="home-header">
@@ -92,7 +101,7 @@ main.winter-demo{height:auto;min-height:100dvh;max-width:650px;overflow:visible;
     <small id="date"></small>
   </header>
 
-  <details class="dev"><summary>開発用設定</summary><div class="dev-body">
+  <section class="dev" aria-label="開発用設定"><div class="dev-caption">開発用設定</div><div class="dev-body">
     
     <label for="character">柿</label><select id="character"><option value="a">A</option><option value="b">B</option><option value="c">C</option></select><label for="snow">天候</label>
     <select id="snow">
@@ -106,7 +115,7 @@ main.winter-demo{height:auto;min-height:100dvh;max-width:650px;overflow:visible;
       <button type="button" class="secondary" id="snowDay">雪の日へ</button>
       <button type="button" class="secondary" id="reset">リセット</button>
     </div>
-  </div></details>
+  </div></section>
 
   <div class="winter-yard">
     <svg viewBox="0 0 400 250" aria-label="雪の庭と成長する雪だるま">
