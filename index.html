@@ -291,7 +291,7 @@ $('collect').onclick = () => {
   }
   state.used++;
   state.total++; state.gathered++;
-  if(state.total===10 && state.variant<0){const r=Math.random();state.variant=r<.3?0:r<.55?1:r<.75?2:r<.9?3:4;state.records.push({variant:state.variant,date:state.date});state.completedOn=state.date;}
+  if(state.total===10){state.variant=Math.floor(Math.random()*names.length);state.records.push({variant:state.variant,date:state.date});state.completedOn=state.date;}
   render();
 
   $('snowman').classList.remove('pop');
@@ -310,7 +310,7 @@ $('collect').onclick = () => {
     1:'最初の雪が集まってきたね。',
     5:'体がしっかりしてきたね。',
     8:'顔が見えてきたよ。',
-    10:'できた！ きれいな雪だるまになったね。'
+    10:`できた！ 今回は「${names[state.variant]}」だね。`
   };
   if (lines[state.total]) say(lines[state.total]);
   else if (state.used === state.snow) say('今日はここまで。また雪が積もったら続きを作ろう。');
