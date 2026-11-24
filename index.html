@@ -87,6 +87,7 @@ main.winter-demo{height:auto;min-height:100dvh;max-width:650px;overflow:visible;
     </select>
     <div class="devbuttons">
       <button type="button" class="secondary" id="next">翌日へ</button>
+      <button type="button" class="secondary" id="snowDay">雪の日へ</button>
       <button type="button" class="secondary" id="reset">リセット</button>
     </div>
   </section>
@@ -250,10 +251,10 @@ function render() {
   $('progressText').textContent = n + ' / 10';
   $('fill').style.width = (n * 10) + '%';
   $('ticks').innerHTML = Array.from({length:10}, (_,i) => `<i style="background:${i < n ? 'rgba(255,255,255,.34)' : 'transparent'}"></i>`).join('');
-  $('remaining').textContent = n === 10 ? '完成しました' : `今日あと ${left} 回`;
+  $('remaining').textContent = n === 10 ? '完成しました' : state.snow<=0 ? '積雪なし・雪が降ったら再開' : `今日あと ${left} 回`;
   $('snowInfo').textContent = `積雪 ${Math.max(0,state.snow)} / 5`;
   $('collect').disabled = !left || n === 10;
-  $('collect').textContent = n === 10 ? '完成' : left ? (state.variant>=0?'雪だるまを直す':'雪を集める') : '今日はおしまい';
+  $('collect').textContent = n === 10 ? '完成' : left ? (state.variant>=0?'雪だるまを直す':'雪を集める') : state.snow<=0 ? '積雪なし' : '今日はおしまい';
 
   $('treeSnow').style.opacity = ratio ? Math.max(.12, ratio) : 0;
   $('groundPile').innerHTML = drawGroundPile(ratio);
@@ -305,6 +306,12 @@ $('next').onclick = () => {
   const before=state.total; state.offset++;
   render(); if(state.total<before)say(state.total?'雪だるま、少し溶けたみたい。':'また雪が降ったら作ろうね。');
   say('おはよう。今日の雪を見てみようか。');
+};
+$('snowDay').onclick = () => {
+  state.snow=5;
+  state.offset++;
+  render();
+  say('雪が積もったね。'+(state.total===0?'新しい雪だるまを作ろう。':'雪を集めよう。'));
 };
 $('reset').onclick = () => {
   state = fresh();
