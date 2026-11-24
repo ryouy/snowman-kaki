@@ -1,0 +1,1669 @@
+/* しゃべる柿の木 — 案六「産直ラベル」を部分採用。ステータスはメーターではなくラベルで示す。
+   水やりタイム（イベント）だけは別トーン（藍色の水面）で組む。 */
+:root{
+  --ground:#F5EEE0; --ground2:#F0E8D8; --panel:#FFFCF4; --panel2:#F3EAD5; --ink:#2A2118; --muted:#7D6446;
+  --line:#2A2118; --dash:#C9B48F; --accent:#D8431C; --accent2:#F0813A; --stamp:#D8431C; --ok:#2E6B4F; --ok-light:#9BD8A6; --leaf:#5F7F3C;
+  --ev-bg:#1B2A44; --ev-bg2:#22365A; --ev-water:#4DB6E8; --ev-water2:#2C8FC9; --ev-ink:#EAF4FB; --ev-muted:#9FB6CC; --ev-warn:#FFB84D;
+  /* メニューオーバーレイ専用 */
+  --menu-scrim:rgba(26,16,11,0.74); --menu-glass:rgba(255,255,255,0.09); --menu-glass-border:rgba(255,255,255,0.16);
+  --menu-text:#F7EDE4; --menu-text-muted:rgba(247,237,228,0.55);
+  /* 和紙・素朴様式の共通トークン。明色の面に置く要素の枠・影・角丸はここだけを使う。
+     ※ .wa（和の渋さ＝診断・結果のパレット）の --wa-* とは別系統。混ぜないこと */
+  --soft-border:1px solid rgba(42,33,24,.14); --soft-shadow:0 1px 3px rgba(42,33,24,.10);
+  --r-card:12px; --r-btn:10px; --r-pill:999px;
+  /* 背景画像の橙の上に赤文字を置くとき用の、--accent より暗い赤 */
+  --accent-deep:#A8300F;
+  /* ヘッダーの帯。地色（--ground）より一段深い生成り。ホームのヘッダーと同じ色味 */
+  --bar-bg:#E8D9BF;
+  /* 見守り人の札（実績）の、写真に見立てた枠の空と畑 */
+  --pop-sky:#DCE8EC; --pop-field:#CBD8AE;
+  /* 育ちぐあいの液晶画面。昔の携帯ゲームの、くすんだ緑の地に濃い点 */
+  --lcd:#A9B98D; --lcd-dim:#94A77A; --lcd-ink:#2C3A26;
+  /* 診断結果のドーナツ図（3尺度）。柿橙・葉緑・山吹で色相を分ける */
+  --chart-1:#E8712C; --chart-2:#5C8A3A; --chart-3:#E0A72C;
+  /* ランキングの表彰台（金・銀・銅。彩度は抑えめ。-soft はメダルの地）と、自分の行の地 */
+  --rank-1:#B0821F; --rank-2:#8E9196; --rank-3:#A8693E; --rank-me:#FBE1D3;
+  --rank-1-soft:#F6E9C8; --rank-2-soft:#ECEDEE; --rank-3-soft:#F3E0D2;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:repeating-linear-gradient(90deg,var(--ground) 0 6px,var(--ground2) 6px 7px);color:var(--ink);
+  font-family:'Zen Kaku Gothic New',-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;font-size:15px;line-height:1.7;min-height:100dvh}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer}
+/* 下余白はもともと画面下のタブ（廃止）を避けるための 96px だった */
+.wrap{max-width:480px;margin:0 auto;padding:14px 14px 24px}
+.wrap.wide{max-width:900px}
+/* ---- ヘッダー ---- */
+.bar{display:flex;justify-content:space-between;align-items:center;font-size:12px;gap:8px;position:relative;z-index:1}
+/* ホームから枝分かれしたページ（実績・ランキング・遊び方・設定・報告）のスマホのヘッダー。
+   ボタンを3つ浮かせるのをやめ、画面の端から端まで1本の帯にする。
+   「戻る 44px ／ ページ名 ／ メニュー 44px」の3列。
+   .wrap の左右の余白ぶんを負のマージンで外へ出して端まで届かせ、
+   上は iPhone のノッチぶん（safe-area）を内側の余白で確保する */
+body[data-sticky-bar] .bar{position:sticky;top:0;z-index:30;
+  display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:0;
+  margin:-14px -14px 14px;padding:env(safe-area-inset-top,0px) 6px 0;
+  min-height:calc(52px + env(safe-area-inset-top,0px));
+  background:var(--bar-bg);border-bottom:var(--soft-border)}
+/* 帯の中ではロゴを出さない。どのページかは真ん中のページ名で分かる */
+body[data-sticky-bar] .bar .logo{display:none}
+/* 真ん中のページ名。字間のぶん右に寄るので、同じだけ字下げして中央に戻す */
+body[data-sticky-bar] .bar-title{grid-column:2;text-align:center;
+  font-weight:700;font-size:15px;letter-spacing:.14em;text-indent:.14em}
+/* 左右のボタンは、見た目は小さくても押せる範囲を 44px 四方にする */
+body[data-sticky-bar] .bar .back-btn,
+body[data-sticky-bar] .bar .tiles-btn{width:44px;height:44px;padding:0;
+  display:grid;place-items:center;background:none;border:none;box-shadow:none;border-radius:var(--r-btn)}
+body[data-sticky-bar] .bar .back-btn{grid-column:1;justify-self:start}
+body[data-sticky-bar] .bar .right{grid-column:3;justify-self:end}
+/* ヘッダー左の「← ホーム」。開発者用設定にも別の .back-btn があるので、ヘッダーの中だけに効かせる */
+.bar .back-btn{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  color:var(--ink);text-decoration:none}
+.bar .back-btn:active{opacity:.85}
+.bar .back-btn svg{flex-shrink:0}
+.bar-title{color:var(--ink)}
+/* 管理画面：スマホは帯の真ん中に「管理画面」と出るので、大きな見出しは出さない（PC では出す）。
+   ログイン中のメールアドレスは、どの幅でも帯のすぐ下に小さく残す */
+.admin-title{display:none}
+.admin-who{margin:0 0 10px;font-size:12px;color:var(--muted);word-break:break-all}
+.logo{display:inline-flex;align-items:center;gap:5px;font-weight:700;letter-spacing:.14em;border:1px solid rgba(42,33,24,.14);border-radius:10px;padding:2px 10px 2px 6px;background:var(--panel);text-decoration:none;box-shadow:0 1px 3px rgba(42,33,24,.10);white-space:nowrap}
+.logo:active{opacity:.85}
+.logo svg,.logo img{width:22px;height:22px;flex-shrink:0}
+.bar .right{display:flex;gap:8px;align-items:center}
+.login-btn{font-weight:700;font-size:13px;color:#fff;background:var(--accent);border:1px solid rgba(42,33,24,.14);border-radius:10px;padding:4px 12px;text-decoration:none;box-shadow:0 1px 3px rgba(42,33,24,.10)}
+.login-btn:active{opacity:.85}
+/* ---- トップ（ノースクロール） ---- */
+body[data-page=top] .wrap{padding-bottom:14px}
+/* 中身は .cta だけ（他は絶対配置）。flex-end で下に寄せる */
+.top{min-height:calc(100dvh - 62px);display:flex;flex-direction:column;justify-content:flex-end;position:relative;overflow:hidden}
+/* 仮：トップの背景レイヤー（農園長）。画像は正方形で、実画像から採寸した顔の帯は
+   上端 7.4% / 中心 24% / 下端 40.5%（いずれも画像高さに対する比）。
+   top:N% + translateY(-24%) で、顔の中心が .top の高さの N% に来る
+   （translateY の % は自分の高さ基準なので、画像を拡大しても比率は崩れない）。
+   いまは N=30%。画像幅を変えるときは .hero-bg と .hero-say を必ず同じ値にする。
+   .hero-say は同じ座標系を共有するためだけの箱で、aspect-ratio:1 により
+   画像とまったく同じ高さになる。吹き出しの縦位置を画像基準で書けるようにする。
+   重なり順は 画像0 → 生成りのヴェール1 → 前景2。
+   差し替えをやめるときは、このブロックと TopPage の hero-bg/hero-veil/hero-say を消す */
+.top .hero-bg{position:absolute;left:50%;width:165%;height:auto;
+  top:30%;transform:translate(-50%,-24%);z-index:0;pointer-events:none}
+/* 顔の下端（画像高さの約41%）は .top の約43%に来る。45%から効かせれば顔にはかからない。
+   終点84%は、下部のバッジとCTAが乗る帯で十分に効きめが出る位置 */
+.top .hero-veil{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,transparent 0 45%,rgba(245,238,224,.94) 84%)}
+.top .hero-say{position:absolute;left:50%;width:165%;top:30%;transform:translate(-50%,-24%);
+  aspect-ratio:1/1;margin:0;padding:0;z-index:2;pointer-events:none}
+/* bottom の % は .hero-say の高さ＝画像の高さ基準。92% で顔の上端のすぐ上に載る。
+   width:max-content が要る。left:50% の絶対配置だと shrink-to-fit の利用可能幅が
+   コンテナの半分になり、1行で収まる文でも折り返してしまう（max-width:92% は base 由来） */
+.top .hero-say .bubble{position:absolute;left:50%;bottom:calc(92% + 8px);
+  transform:translateX(-50%);margin:0;font-size:21px;width:max-content;
+  /* これが無いと狭い画面で吹き出しが .top からはみ出し、overflow:hidden に
+     両端を切り取られる（base の max-width:92% は .hero-say 基準なので効かない）。
+     .hero-say の幅比率は画面によって 165%/130% と変わるため、% ではなく
+     画面幅から直接引く。32px は .wrap の左右パディング14px+余白ぶん */
+  max-width:calc(100vw - 32px)}
+/* 顔の上に置くので、三角は下向きに反転する */
+.top .hero-say .bubble::after{top:auto;bottom:-7px;
+  border-left:none;border-top:none;border-right:var(--soft-border);border-bottom:var(--soft-border)}
+.top .cta{padding:8px 0 14px;position:relative;z-index:2}
+.top .cta .action{margin-top:0;font-size:17px;padding:15px 0}
+.top .cta .action.quiet{margin-top:10px}
+.top .cta .diag-meta{margin:0 0 8px;color:var(--accent);font-size:12px}
+/* トップは背景に農園長がいるので、面を不透明にして輪郭が透けないようにする。
+   診断ページ側は背景が無地なので base（半透明）のまま */
+.top .cta .diag-meta span{background:var(--panel);border:var(--soft-border)}
+/* トップと、ヘッダーをトップにそろえたページ（診断・規約・プライバシー・お問い合わせ、#198・#201）は、
+   ヘッダーの箱を外して背景に溶かす。右スロットは Layout の
+   headerLogin でログインのテキストリンク1つに置き換わる（メニューは出ない） */
+/* 公開ページ（トップ・診断・結果・プロジェクト紹介・遊び方・利用規約・プライバシー・お問い合わせ・共有）は、
+   ロゴを箱なしで出してトップと同じ見え方にそろえる。どのページがそうかは src/views/layout.tsx の PLAIN_BAR で決める */
+body[data-plain-bar] .logo{background:none;border:none;box-shadow:none;padding:2px 0}
+/* トップのヘッダー右。メニューボタンの代わりに置くテキストリンク */
+.login-link{font-weight:700;font-size:14px;color:var(--ink);text-decoration:none;padding:2px 0;white-space:nowrap}
+.login-link:active{opacity:.85}
+/* 規約リンクだけの最小フッター。副CTAの下に控えめに置く */
+.top .legal{margin:10px 0 0;text-align:center;font-size:11px;color:var(--muted)}
+.top .legal a{margin:0 8px;color:inherit;text-decoration:underline;text-underline-offset:3px}
+/* TopPage 和紙・素朴スタイルは .action / .stage .bubble / .diag-meta の共通ルールへ昇格した。
+   .top 配下に残すのは寸法・余白だけ（上記 .top .cta .action など） */
+/* ---- ポップアップ ---- */
+.modal{position:fixed;inset:0;z-index:40;display:none;align-items:flex-end;justify-content:center}
+.modal.open{display:flex}
+.modal .bg{position:absolute;inset:0;background:rgba(42,33,24,.5)}
+.modal .box{position:relative;width:100%;max-width:480px;max-height:86dvh;overflow:auto;background:var(--panel);border:var(--soft-border);border-bottom:none;border-radius:var(--r-card) var(--r-card) 0 0;padding:18px 18px 28px;box-shadow:var(--soft-shadow)}
+.modal .box h2{font-size:18px;margin:0 0 10px;letter-spacing:.08em}
+.modal .box h3{font-size:12px;letter-spacing:.24em;color:var(--muted);margin:16px 0 4px}
+.modal .box p{margin:0 0 6px;font-size:14px}
+.modal .close{position:absolute;right:12px;top:10px;background:none;border:none;font-size:24px;line-height:1}
+.modal .box .ext{font-weight:700;color:var(--accent);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}
+.modal .box .ext::after{content:'↗';font-size:11px;margin-left:3px;vertical-align:super;text-decoration:none;display:inline-block}
+
+@media (min-width:700px){ .modal{align-items:center} .modal .box{border-bottom:var(--soft-border);border-radius:var(--r-card)} }
+/* ---- 結果：ほかの木 ---- */
+.others{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.other{border:1px dashed var(--dash);border-radius:var(--r-card);padding:10px;text-align:center;background:var(--panel2)}
+.other svg{display:block;margin:0 auto 4px}
+.other b{display:block;font-size:16px}
+.other .small{display:block;margin:2px 0 8px}
+.other button{font-size:12px;padding:5px 8px}
+.pt{font-weight:700;display:flex;gap:6px;align-items:center}
+.pt .tag{margin:0}
+/* ---- 舞台（柿のイラスト） ---- */
+.stage{position:relative;margin:14px 0 0;padding:6px 0 0;text-align:center}
+.stage svg,.stage .char-img{width:min(78vw,300px);height:auto;display:block;margin:0 auto;filter:drop-shadow(0 6px 0 rgba(51,41,28,.12))}
+.stage .nameplate{display:inline-block;margin:0 auto 2px;font-family:'Yusei Magic','Zen Kaku Gothic New',sans-serif;font-size:15px;letter-spacing:.24em;text-indent:.24em;color:var(--ink);background:var(--panel);border:var(--soft-border);border-radius:var(--r-btn);padding:1px 12px;box-shadow:var(--soft-shadow);position:relative;z-index:1}
+.wa .stage .nameplate{background:var(--wa-paper);color:var(--wa)}
+.stage .weather{position:absolute;right:4px;top:0;font-size:12px;font-weight:700;background:var(--panel);border:var(--soft-border);border-radius:var(--r-pill);padding:2px 8px;display:flex;gap:6px;align-items:center}
+.stage .bubble{display:inline-block;margin:6px auto 0;background:var(--panel);border:var(--soft-border);box-shadow:var(--soft-shadow);padding:6px 14px;font-family:'Yusei Magic','Zen Kaku Gothic New',sans-serif;color:var(--accent);font-size:16px;position:relative;max-width:92%}
+.stage .bubble::after{content:'';position:absolute;left:50%;top:-9px;width:12px;height:12px;background:var(--panel);border-left:var(--soft-border);border-top:var(--soft-border);transform:translateX(-50%) rotate(45deg)}
+/* ---- 主アクション ---- */
+.action{display:block;width:100%;margin:14px 0 0;text-align:center;font-weight:700;font-size:16px;color:#fff;background:var(--accent);
+  padding:14px 0;letter-spacing:.2em;border:none;border-radius:var(--r-btn);box-shadow:var(--soft-shadow);text-decoration:none}
+.action:active{transform:none;box-shadow:var(--soft-shadow);opacity:.85}
+.action.quiet{background:var(--panel);border:var(--soft-border);color:var(--ink);box-shadow:none}
+.action.quiet:active{opacity:.85}
+.action.green{background:var(--ok)}
+.action[disabled],.action.disabled{background:var(--panel2);color:var(--muted);box-shadow:none;cursor:not-allowed}
+.note{font-size:12px;text-align:center;margin:8px 0 0;color:var(--muted)}
+/* ---- ラベルカード ---- */
+.card{position:relative;margin:16px 0 0;background:var(--panel);border:var(--soft-border);border-radius:var(--r-card);box-shadow:var(--soft-shadow);padding:14px}
+.card + .card, .card + .action, .action + .card{margin-top:22px}
+.card h2{font-size:13px;letter-spacing:.24em;margin:0 0 8px;color:var(--muted);font-weight:700}
+/* ランキングの見出しは期間（2026/11/7〜2027/12/31 の総合ランキング）が入って長いので、
+   右上の判子のぶんを空けて折り返させる。字間も詰める */
+.rank-card h2{padding-right:48px;letter-spacing:.1em;line-height:1.5}
+.row{display:flex;gap:10px;font-size:13.5px;border-bottom:1px dashed var(--dash);padding:6px 0;align-items:baseline}
+.row:last-child{border-bottom:none}
+.row b{min-width:60px;color:var(--muted);font-weight:700;flex-shrink:0;letter-spacing:.1em}
+.row span{flex:1;min-width:0;overflow-wrap:anywhere}
+.tag{display:inline-block;font-size:12px;font-weight:700;border:var(--soft-border);border-radius:var(--r-pill);padding:0 8px;line-height:1.7;background:var(--panel2);margin:0 4px 2px 0;white-space:nowrap}
+.tag.warn{background:#FFE0D3;border-color:var(--accent);color:var(--accent)}
+.tag.ok{background:#D6EBDF;border-color:var(--ok);color:var(--ok)}
+.tag.blue{background:#D6E9F5;border-color:#2C6E9C;color:#2C6E9C}
+.tag.dim{color:var(--muted);border-color:var(--dash)}
+.stamp{position:absolute;top:-14px;right:-8px;width:52px;height:52px;border:2.5px solid var(--stamp);border-radius:50%;color:var(--stamp);display:grid;place-items:center;
+  font-weight:700;font-size:13px;transform:rotate(12deg);background:rgba(249,244,230,.8);line-height:1.1;text-align:center}
+.stamp.small{width:40px;height:40px;font-size:11px}
+.say{font-family:'Yusei Magic','Zen Kaku Gothic New',sans-serif;font-size:16px;color:var(--accent);margin:10px 0 2px}
+.code{height:20px;margin-top:10px;background:repeating-linear-gradient(90deg,var(--line) 0 2px,transparent 2px 5px,var(--line) 5px 6px,transparent 6px 10px)}
+/* 設定。スマホの「設定」アプリのように、1行に 項目名・今の値・操作（＞）を並べる。
+   枠・影・角丸はトークン、行の区切りは既存の破線（--dash）を使う */
+.settings .card h2{margin-bottom:2px}
+/* 行そのもの。details の summary と、リンク・ボタンで同じ見た目にする */
+.settings .set > summary,.settings .set.tap,.settings .set .line{
+  display:flex;align-items:center;gap:10px;width:100%;padding:11px 0;
+  font:inherit;font-size:14px;font-weight:400;text-align:left;text-decoration:none;color:var(--ink);
+  background:none;border:none;cursor:pointer;list-style:none}
+.settings .set > summary::-webkit-details-marker{display:none}
+/* 右側に来るもの（値・「変える ＞」・＞・トグル）を、項目名のうしろの余白でまとめて右端へ送る。
+   以前は右側の部品それぞれに margin-left:auto を付けていたので、値を持たない行
+  （木の記憶の「消す ＞」）だけが項目名のとなりに残っていた（#256） */
+.settings .set b{font-weight:700;flex:0 0 auto;margin-right:auto}
+.settings .set .val{font-size:13px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 「変える ＞」「消す ＞」。値のある行では値のとなり、値のない行でも右端にそろう */
+.settings .set .act{flex:0 0 auto;display:inline-flex;align-items:center;gap:2px;
+  font-size:13px;font-weight:700;color:var(--accent)}
+.settings .set.tap > svg,.settings .set .act > svg{flex:0 0 auto}
+.settings .set.tap > svg{color:var(--muted)}
+.settings .set.tap:active,.settings .set > summary:active{opacity:.85}
+.settings .set.danger b{color:var(--accent)}
+/* 開いたら ＞ を下向きにして、開いていることを示す */
+.settings .set[open] > summary .act svg{transform:rotate(90deg)}
+.settings .set .body{padding:0 0 12px}
+/* 区切り線は .list の中の2つ目以降の上に引く。行が details・form・button・a と
+   種類がまちまちなので :last-of-type では当たらない。
+   行の border:none より後ろ・同じ詳細度で書いて、こちらを効かせる */
+.settings .card .list > * + *{border-top:1px dashed var(--dash)}
+/* 通知の行。トグルは右端、状態の説明はその下 */
+.settings .set.notice .line{padding-bottom:4px}
+.settings .set.notice .toggle{flex:0 0 auto;margin-left:0}
+.settings .set.notice .small{margin:0 0 11px}
+.settings form{margin:0}
+.settings .org{text-align:center;margin:14px 0 0}
+
+/* 見守り人の札（実績ページ）。直売所の「生産者の顔が見える野菜」の札に倣う。
+   中身は見出し・写真・名前だけ。数字は札の外（.pop-facts）に出す。
+   手書き風の字・バーコード（.code）・ランクの判子（.stamp）は、いずれも
+   このアプリで既に使っているもの。枠・影・角丸は :root のトークンだけで、
+   グラデーションは使わない（空と畑は単色の面を2枚重ねている） */
+.pop{text-align:center;padding:18px 14px 14px}
+/* 「私が作りました」にあたる見出し。札の主役なので大きく、手書き風に */
+.pop .headline{margin:0 0 14px;font-family:'Yusei Magic','Zen Kaku Gothic New',sans-serif;
+  font-size:20px;font-weight:400;line-height:1.45;letter-spacing:.02em;color:var(--accent)}
+/* 絵は小さめに左、表示欄は右。狭い画面でも横並びを保つ */
+.pop .pop-body{display:flex;align-items:stretch;gap:12px;text-align:left}
+/* 見守り人が畑に立っている写真に見立てた枠 */
+.pop .photo{position:relative;overflow:hidden;flex:0 0 108px;align-self:flex-start;
+  background:var(--pop-sky);border:var(--soft-border);border-radius:var(--r-card);box-shadow:var(--soft-shadow)}
+.pop .photo .sky,.pop .photo .field{position:absolute;left:0;right:0}
+/* 地平線は肩の後ろに来る高さにする（顔の真ん中を横切らないように） */
+.pop .photo .sky{top:0;height:60%;background:var(--pop-sky)}
+.pop .photo .field{top:60%;bottom:0;background:var(--pop-field)}
+/* 顔が枠の中央に来るように、枠いっぱいに置く */
+.pop .photo .face{position:relative;width:100%;height:auto;display:block}
+/* 野菜の値札の表示欄。品種・等級・見守り */
+.pop .spec{flex:1;min-width:0;margin:0;display:grid;grid-template-columns:auto 1fr;align-content:center;gap:0 10px}
+.pop .spec dt{font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted);align-self:center}
+.pop .spec dd{margin:0;font-size:16px;font-weight:700;line-height:1.5;padding:3px 0;
+  border-bottom:1px dashed var(--dash)}
+.pop .spec dt + dd{min-width:0}
+.pop .spec dd:last-of-type{border-bottom:none}
+.pop .spec .note{margin-left:6px;font-size:10.5px;font-weight:400;color:var(--muted)}
+/* 見守り人の名前 */
+.pop .name{margin:14px 0 0;font-family:'Yusei Magic','Zen Kaku Gothic New',sans-serif;
+  font-size:27px;line-height:1.25;color:var(--ink);word-break:break-word}
+.pop .name small{display:block;margin-top:2px;font-family:'Zen Kaku Gothic New',sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:.24em;text-indent:.24em;color:var(--muted)}
+.pop .code{margin-top:16px}
+/* 札の共有は1つだけ。押すと共有シート（X・LINE・URL・画像）が開く */
+.pop-share{margin:10px 0 0}
+.pop-share .btn{display:block;width:100%}
+.small{font-size:12px;color:var(--muted)}
+.center{text-align:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* 管理画面の中見出し（全体設定の中で、費用と対策を分ける） */
+.card h3.sub{margin:16px 0 6px;font-size:14px;letter-spacing:.08em;color:var(--muted);
+  border-top:var(--soft-border);padding-top:12px}
+.btn{display:inline-block;font-weight:700;font-size:14px;background:var(--panel);border:var(--soft-border);border-radius:var(--r-btn);padding:8px 14px;text-decoration:none;box-shadow:var(--soft-shadow);text-align:center}
+.btn.primary{background:var(--accent);color:var(--panel)}
+.btn.block{display:block;width:100%}
+.btn:active{opacity:.85}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+input[type=text],input[type=email],textarea,select{width:100%;font:inherit;padding:10px;border:var(--soft-border);border-radius:var(--r-btn);background:#fff;color:var(--ink)}
+textarea{min-height:100px}
+/* iOS は 16px 未満の入力欄をタップすると画面を拡大する（#191）。スマホ幅だけ 16px にする */
+@media (max-width:519px){ input[type=text],input[type=email],textarea,select{font-size:16px} }
+label.f{display:block;font-weight:700;font-size:13px;margin:12px 0 4px;letter-spacing:.1em;color:var(--muted)}
+/* オン・オフのトグル（マイページの通知、#66）。チェックボックスをスイッチの形にする */
+.toggle{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;font-size:14px}
+.toggle input{appearance:none;-webkit-appearance:none;flex:0 0 auto;position:relative;width:44px;height:26px;margin:0;border:var(--soft-border);border-radius:var(--r-pill);background:var(--panel2);cursor:pointer;transition:background-color .15s}
+.toggle input::before{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:var(--r-pill);background:var(--panel);box-shadow:var(--soft-shadow);transition:left .15s}
+.toggle input:checked{background:var(--accent)}
+.toggle input:checked::before{left:20px}
+.toggle input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toggle input:disabled{opacity:.5;cursor:not-allowed}
+.err{background:#F6D7CD;border:1px solid var(--accent);border-radius:var(--r-btn);color:var(--accent);padding:8px 12px;font-weight:700;margin:12px 0 0}
+/* お問い合わせのハニーポット（#19）。画面の外に置き、人には見せない */
+.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+.ok-box{background:#D9E6DE;border:1px solid var(--ok);border-radius:var(--r-btn);color:var(--ok);padding:8px 12px;font-weight:700;margin:12px 0 0}
+/* ---- 診断 ---- */
+.q-no{font-size:12px;letter-spacing:.3em;color:var(--muted);font-weight:700}
+.q-text{font-size:19px;font-weight:700;margin:6px 0 14px;line-height:1.5}
+.choice{display:block;width:100%;text-align:left;background:var(--panel);border:var(--soft-border);border-radius:var(--r-btn);padding:12px 14px;margin:8px 0;font-size:15px;box-shadow:var(--soft-shadow)}
+.choice:active{opacity:.85}
+.choice.picked{background:var(--accent);color:var(--panel)}
+.choice.right{background:#D9E6DE;border-color:var(--ok)}
+.choice.wrong{background:#F6D7CD;border-color:var(--accent)}
+.progress{display:flex;gap:4px;margin:10px 0 0}
+.progress i{flex:1;height:6px;background:var(--panel);border:1px solid var(--line)}
+.progress i.done{background:var(--ink)}
+/* ---- 会話 ---- */
+.chat{display:flex;flex-direction:column;gap:10px;margin:14px 0 0}
+/* 画面上部のお知らせポップアップ */
+.notice-pop{position:fixed;left:50%;top:calc(54px + env(safe-area-inset-top));transform:translateX(-50%);z-index:20;
+  border-radius:14px;
+  width:min(92vw,452px);display:flex;align-items:center;gap:10px;background:var(--panel);border:var(--soft-border);
+  box-shadow:var(--soft-shadow),0 12px 24px rgba(42,33,24,.22);padding:9px 12px;animation:noticein .45s cubic-bezier(.34,1.3,.64,1)}
+@keyframes noticein{from{opacity:0;transform:translate(-50%,-14px)}to{opacity:1;transform:translate(-50%,0)}}
+.notice-pop.out{animation:noticeout .25s ease forwards}
+@keyframes noticeout{to{opacity:0;transform:translate(-50%,-14px)}}
+.notice-pop .ico{font-size:20px;line-height:1;flex-shrink:0}
+.notice-pop .body{flex:1;min-width:0}
+.notice-pop b{display:block;font-size:14px;line-height:1.4}
+.notice-pop small{display:block;font-size:11.5px;color:var(--muted);line-height:1.5}
+.notice-pop .timer{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink)}
+.notice-pop .go{flex-shrink:0;font-size:12px;font-weight:700;color:#fff;background:var(--accent);border:none;border-radius:var(--r-pill);
+  padding:4px 10px;text-decoration:none;box-shadow:var(--soft-shadow)}
+.notice-pop .x{flex-shrink:0;background:none;border:none;font-size:20px;line-height:1;padding:0 2px;color:var(--muted)}
+/* 押せる領域を 44px 四方にする。見た目の大きさは変えず、透明な面だけ広げる（#62） */
+.notice-pop .go,.notice-pop .x{position:relative}
+.notice-pop .go::after,.notice-pop .x::after{content:'';position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+.notice-pop.live{background:linear-gradient(90deg,var(--ev-bg2),var(--ev-bg));color:#fff;border-color:var(--ev-bg)}
+.notice-pop.live small,.notice-pop.live .x{color:var(--ev-muted)}
+.notice-pop.live .timer{color:var(--ev-water)}
+.notice-pop.live .go{background:var(--ev-water);color:var(--ev-bg);border-color:var(--ev-bg)}
+/* ホームでの上下の位置は、ヘッダーと「今日のこと」の帯の下（--char-top＝その2つの箱の高さ。public/app.js が測る）。
+   決め打ちにすると、ヘッダーの高さが変わったとき（#275 のランク）や帯（#277）を隠してしまう。
+   一覧を開いているあいだは、その高さ（--today-h）のぶんだけ下げる（重なると「水を注ぐ」が押せない） */
+body[data-page=home] .notice-pop{top:calc(var(--char-top) + var(--today-h,0px) + 6px);width:min(94vw,452px);
+  background:rgba(255,252,244,.72);border:none;color:var(--ink);backdrop-filter:blur(12px) saturate(1.2);
+  box-shadow:0 10px 24px rgba(12,9,7,.3)}
+body[data-page=home] .notice-pop b{font-size:14.5px;color:var(--ink)}
+body[data-page=home] .notice-pop small{color:var(--muted)}
+body[data-page=home] .notice-pop .x{color:var(--muted)}
+body[data-page=home] .notice-pop .timer{color:#1F5E86}
+body[data-page=home] .notice-pop .go{background:var(--accent);color:#fff;border:none;border-radius:999px;
+  padding:5px 12px;box-shadow:none}
+body[data-page=home] .notice-pop.live{background:rgba(255,252,244,.72)}
+body[data-page=home] .notice-pop.live .go{background:#2C8FC9;color:#fff}
+body[data-page=home] .notice-pop .go[disabled]{opacity:.55}
+/* 4.4 バケツの水位（参加人数／目標人数）。水やりイベントの藍色トーン */
+.notice-pop .lv{display:flex;align-items:center;gap:8px;margin-top:4px}
+.notice-pop .lv .bar{flex:1;height:6px;border-radius:999px;background:rgba(44,143,201,.18);overflow:hidden}
+.notice-pop .lv .bar i{display:block;height:100%;background:#2C8FC9;transition:width .4s ease}
+.notice-pop .lv .cnt{font-size:11px;color:#1F5E86;font-variant-numeric:tabular-nums;font-weight:700}
+
+.msg{max-width:84%;padding:9px 13px;border:var(--soft-border);border-radius:var(--r-card);background:#fff;font-size:14.5px;line-height:1.6;position:relative;
+  overflow-wrap:anywhere;white-space:pre-wrap}
+.msg.tree{align-self:flex-start;background:var(--panel);font-family:'Yusei Magic','Zen Kaku Gothic New',sans-serif;color:var(--accent);font-size:15.5px}
+.msg.human{align-self:flex-end;background:#EDE3CF}
+.msg.thinking{color:var(--muted);font-family:inherit;font-size:13px}
+/* ---- 水やりタイム（イベント：別デザイン） ---- */
+.event{margin:18px -4px 0;background:radial-gradient(120% 80% at 50% 0%,var(--ev-bg2),var(--ev-bg) 70%);color:var(--ev-ink);border-radius:22px;padding:18px 16px 16px;
+  font-family:'M PLUS Rounded 1c','Zen Kaku Gothic New',sans-serif;box-shadow:0 14px 30px rgba(27,42,68,.35);position:relative;overflow:hidden}
+.event::before{content:'';position:absolute;inset:auto -20% -40% -20%;height:60%;background:radial-gradient(60% 100% at 50% 100%,rgba(77,182,232,.25),transparent 70%);pointer-events:none}
+.event .ev-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;letter-spacing:.2em;color:var(--ev-muted);font-weight:700}
+.event .live{background:var(--ev-water);color:var(--ev-bg);border-radius:999px;padding:1px 10px;letter-spacing:.1em;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.event .ev-title{font-size:22px;font-weight:800;margin:6px 0 0;letter-spacing:.06em}
+.event .ev-sub{font-size:13px;color:var(--ev-muted);margin:2px 0 12px}
+.event .timer{font-variant-numeric:tabular-nums;font-size:34px;font-weight:800;letter-spacing:.04em;line-height:1;color:#fff}
+.event .timer small{font-size:12px;color:var(--ev-muted);margin-left:6px;letter-spacing:.2em}
+.event .bucket{display:flex;gap:16px;align-items:center;margin:14px 0 0}
+.event .bucket svg{width:96px;height:112px;flex-shrink:0}
+.event .stat{flex:1;font-size:13px;color:var(--ev-muted)}
+.event .stat b{display:block;font-size:26px;color:#fff;font-weight:800;line-height:1.2}
+.event .stat .full{display:inline-block;margin-top:6px;background:var(--ev-warn);color:var(--ev-bg);border-radius:999px;padding:1px 10px;font-size:12px;font-weight:800}
+.event .ev-btn{display:block;width:100%;margin:16px 0 0;border:none;border-radius:999px;background:linear-gradient(90deg,var(--ev-water),var(--ev-water2));color:#fff;font-weight:800;font-size:17px;padding:14px 0;letter-spacing:.14em;box-shadow:0 6px 0 #1A5E85,0 10px 22px rgba(77,182,232,.35)}
+.event .ev-btn:active{transform:translateY(3px);box-shadow:0 3px 0 #1A5E85}
+.event .ev-btn[disabled]{background:#3A4E6E;box-shadow:none;color:var(--ev-muted);cursor:not-allowed}
+.event .ev-note{font-size:12px;color:var(--ev-muted);text-align:center;margin:10px 0 0}
+.event.quiet{background:var(--ev-bg);box-shadow:none}
+.event .ev-result{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.event .ev-result div{background:rgba(255,255,255,.08);border-radius:12px;padding:8px 10px;font-size:12px;color:var(--ev-muted)}
+.event .ev-result div b{display:block;font-size:16px;color:#fff}
+.wave{position:absolute;left:0;right:0;bottom:0;height:22px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 20' preserveAspectRatio='none'%3E%3Cpath d='M0 10 Q15 0 30 10 T60 10 T90 10 T120 10 V20 H0Z' fill='%234DB6E8' fill-opacity='.22'/%3E%3C/svg%3E") repeat-x;background-size:120px 20px;animation:wave 4s linear infinite}
+@keyframes wave{to{background-position-x:120px}}
+/* ---- バナー（S6 開催中） ---- */
+.banner{display:block;margin:14px -4px 0;background:linear-gradient(90deg,var(--ev-bg2),var(--ev-bg));color:#fff;border-radius:16px;padding:12px 16px;text-decoration:none;
+  font-family:'M PLUS Rounded 1c','Zen Kaku Gothic New',sans-serif;box-shadow:0 8px 20px rgba(27,42,68,.3);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.banner b{font-size:16px;font-weight:800}
+.banner .timer{font-variant-numeric:tabular-nums;font-size:22px;font-weight:800;color:var(--ev-water)}
+.banner small{display:block;font-size:11px;color:var(--ev-muted)}
+/* ---- ランキング／バッジ ---- */
+.rank-list{margin:0;padding:0;list-style:none}
+.rank-list li{display:flex;gap:10px;align-items:baseline;border-bottom:1px dashed var(--dash);padding:7px 0;font-size:14px}
+.rank-list .no{min-width:2.6em;font-weight:700;color:var(--muted)}
+.rank-list .nm{flex:1}
+.rank-list .p{font-weight:700;font-variant-numeric:tabular-nums}
+/* 自分の行。地を淡い橙にして、左に朱の縦罫（CLAUDE.md の例外）、名前の横に「あなた」の札。
+   札と .my-rank の小さい文字は朱（--accent）の地だと 4.5:1 に届かないので、濃い朱（--accent-deep）の地にする */
+.rank-list li.me{background:var(--rank-me);margin:0 -8px;padding:7px 8px 7px 5px;border-left:3px solid var(--accent);border-radius:var(--r-btn)}
+.rank-list li.me .no,.rank-list li.me .p{color:var(--accent-deep)}
+.ranking .you{display:inline-block;margin-left:6px;padding:0 7px;font-size:10.5px;font-weight:700;line-height:1.7;vertical-align:1px;
+  color:var(--panel);background:var(--accent-deep);border-radius:var(--r-pill)}
+/* 月間・年間の切り替え。1枚の角丸の地に2つのつまみ。選んでいる側を朱で塗る */
+.rank-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:14px;padding:4px;
+  background:var(--panel);border:var(--soft-border);border-radius:var(--r-pill);box-shadow:var(--soft-shadow)}
+.rank-tabs a{display:block;padding:8px 0;font-size:14px;font-weight:700;text-align:center;text-decoration:none;color:var(--muted);border-radius:var(--r-pill)}
+.rank-tabs a.on{color:var(--panel);background:var(--accent)}
+.rank-tabs a:active{opacity:.85}
+/* 1〜3位の表彰台。2位・1位・3位の順に並べ、メダル・名前・点の下に高さの違う台座を置く。
+   台座は金・銀・銅の単色（グラデーションは使わない）。台座の上の「○位」は大きい文字の 3:1 を満たす濃さにしてある。
+   メダルの2pxの縁と内側の白帯は判子（.stamp）と同じ意匠（CLAUDE.md の例外）。読み込み時に台座が下から伸びる */
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:6px;align-items:end;margin:10px 0 14px;padding:14px 4px 0;list-style:none;
+  background:var(--panel2);border-radius:var(--r-card)}
+.podium li{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;text-align:center}
+/* DOM は 1位・2位・3位 の順（読み上げの順）。見た目だけ 2位・1位・3位 に並べ替える */
+.podium .pos2{order:1}
+.podium .pos1{order:2}
+.podium .pos3{order:3}
+.podium .pos1{--medal:var(--rank-1);--medal-soft:var(--rank-1-soft)}
+.podium .pos2{--medal:var(--rank-2);--medal-soft:var(--rank-2-soft)}
+.podium .pos3{--medal:var(--rank-3);--medal-soft:var(--rank-3-soft)}
+.podium .crown{line-height:0;color:var(--rank-1);margin-bottom:-2px}
+.podium .medal{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;
+  color:var(--medal);background:var(--medal-soft);border:2px solid var(--medal);box-shadow:inset 0 0 0 3px var(--panel)}
+.podium .pos1 .medal{width:60px;height:60px}
+/* メダルの中は推し柿のキャラクターの顔。二重の縁はそのまま残し、絵は内側の白帯の内に丸く収める。
+   大きさは 縁2px×2 と白帯のぶん 8px を引いた 48px（1位）／34px。app.tsx の TreeIcon の size もこれに合わせる */
+.podium .medal img{width:calc(100% - 8px);height:calc(100% - 8px);border-radius:50%;object-fit:cover}
+.podium .nm{max-width:100%;margin-top:3px;padding:0 2px;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium .pos1 .nm{font-size:15px}
+.podium .p{font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.podium .pos1 .p{font-size:15px;color:var(--ink)}
+.podium .p small{font-size:10.5px;margin-left:1px}
+.podium .you{margin:0}
+.podium .stand{display:flex;justify-content:center;align-items:flex-start;width:100%;margin-top:6px;padding-top:8px;
+  color:var(--panel);background:var(--medal);border-radius:var(--r-btn) var(--r-btn) 0 0;
+  transform-origin:bottom;animation:podium-rise .55s cubic-bezier(.2,.8,.3,1) both}
+.podium .pos1 .stand{height:92px}
+.podium .pos2 .stand{height:66px;animation-delay:.12s}
+.podium .pos3 .stand{height:48px;animation-delay:.24s}
+.podium .stand .no{font-size:24px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.podium .pos1 .stand .no{font-size:32px}
+.podium .stand .no small{font-size:12px;margin-left:1px}
+.podium li.me .medal{border-color:var(--accent)}
+@keyframes podium-rise{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.podium .stand{animation:none}}
+/* 11〜50位。閉じているときはボタン、開くと一覧の上に「閉じる」 */
+.rank-more{margin-top:10px}
+.rank-more summary{display:block;list-style:none}
+.rank-more summary::-webkit-details-marker{display:none}
+.rank-more summary:active{opacity:.85}
+.rank-more .close,.rank-more[open] .open{display:none}
+.rank-more[open] .close{display:inline}
+.rank-more[open] summary{margin-bottom:6px}
+/* 自分の順位。ランキングのカードのすぐ下に置く朱の札。2行目に「○位まで あと○pt」 */
+.my-rank{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-top:12px;padding:12px 16px;
+  color:var(--panel);background:var(--accent-deep);border:var(--soft-border);border-radius:var(--r-card);box-shadow:var(--soft-shadow)}
+.my-rank .lbl{flex:1;font-size:13px;font-weight:700}
+.my-rank .no{font-size:26px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.my-rank .no small{font-size:12px;margin-left:1px}
+.my-rank .p{font-weight:700;font-variant-numeric:tabular-nums}
+.my-rank .next{flex-basis:100%;font-size:12px;font-weight:700;opacity:.9}
+.my-rank .out{font-size:12px}
+/* 名前の報告（#103）。行の主役は名前と点数なので、枠も面も持たない控えめな文字のボタンにする */
+.rank-list .rp{margin:0;align-self:center}
+.podium .rp{margin:-2px 0 0}
+.ranking .rp button{display:inline-flex;align-items:center;gap:3px;background:none;border:none;padding:4px 2px;font:inherit;font-size:11.5px;color:var(--muted);cursor:pointer}
+.ranking .rp button:active{opacity:.85}
+/* 育ちぐあい。昔の携帯ゲームの液晶に見立てた小窓。
+   くすんだ緑の地に濃い点だけで描く。新しいフォントは読み込まず、
+   段階の絵もメーターも点と四角で表している */
+.growth .lcd{margin-top:2px;padding:12px 10px 10px;background:var(--lcd);
+  border:var(--soft-border);border-radius:var(--r-card);text-align:center;color:var(--lcd-ink)}
+/* 段階の並び。たね → えんじゅく を1列に並べる。折り返すと「進み方」が読めなくなるので折らない */
+/* 16×16 のドット絵を8つ。375px でも1列に収まるよう、余白は切り詰める */
+.growth .stages{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;max-width:340px;margin:0 auto}
+.growth .st{display:block;padding:1px}
+.growth .st img{width:100%;height:auto;display:block}
+/* まだ届いていない段階は、色を抜いて薄く見せる（ドット絵のときの --lcd-dim と同じ役目） */
+.growth .st.yet img{filter:grayscale(.9);opacity:.4}
+/* いまの段階だけ枠で囲む（色ではなく囲みで示す） */
+.growth .st.now{outline:2px solid var(--lcd-ink);outline-offset:0}
+/* いまの段階を大きく。小窓の空いているところに置く */
+.growth .nowart{display:block;width:auto;height:150px;max-width:100%;margin:8px auto 0;object-fit:contain}
+/* ランクの判子は、名前の文字数が2〜5とばらつく（たね〜えんじゅく）。
+   丸を少し大きくして1行に収め、入りきらない長さのときだけ字を小さくする
+   （52px の丸に13pxの5文字だと「えんじ／ゅく」と割れていた）。文字数は data-len で渡す */
+.growth .stamp{width:60px;height:60px;white-space:nowrap}
+.growth .stamp[data-len="5"]{font-size:10.5px}
+.growth .stamp[data-len="6"]{font-size:9px}
+.growth .nowline{margin:10px 0 0;font-size:12px;letter-spacing:.18em;color:var(--lcd-ink)}
+.growth .nowline b{font-size:15px;letter-spacing:.1em}
+/* ポイントの進み具合。■■■■□□ */
+.growth .meter{display:flex;gap:3px;justify-content:center;margin:8px 0 0}
+.growth .meter i{width:16px;height:12px;outline:2px solid var(--lcd-ink);outline-offset:-2px;background:transparent}
+.growth .meter i.on{background:var(--lcd-ink)}
+.growth .toNext{margin:8px 0 0;font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--lcd-ink)}
+.growth .pts{margin:2px 0 0;font-size:11px;letter-spacing:.14em;color:var(--lcd-ink);opacity:.75}
+/* バッジは6つ。3列×2段で揃える（4列だと 4＋2 で下の段が空く） */
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.badge{text-align:center;font-size:10.5px;line-height:1.3;border:1px dashed var(--dash);border-radius:var(--r-btn);padding:8px 2px;color:var(--muted)}
+.badge i{display:block;font-style:normal;font-size:24px;margin-bottom:2px;filter:grayscale(1);opacity:.35}
+.badge.got{border:1px solid var(--stamp);color:var(--ink);background:var(--panel2)}
+.badge.got i{filter:none;opacity:1;color:var(--accent)}
+button.badge{font:inherit;font-size:10.5px;cursor:pointer;width:100%}
+/* 獲得条件。title だけだとスマホでは見えないので、名前の下に小さく出す（#191） */
+.badge .cond{display:block;margin-top:3px;font-size:9.5px;line-height:1.35;color:var(--muted)}
+button.badge:active{opacity:.85}
+/* 年ごとの実績（トロフィー、#155）。1年1行。枠・角丸は共通トークン、面はバッジの獲得済みと同じ */
+.trophies{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.trophies li{display:flex;gap:10px;align-items:center;border:var(--soft-border);border-radius:var(--r-btn);background:var(--panel2);padding:8px 10px}
+.trophies .ic{display:flex;color:var(--accent)}
+.trophies .yr{min-width:6.5em;font-weight:700;font-variant-numeric:tabular-nums}
+.trophies .rk{flex:1;font-weight:700}
+.trophies small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+.shared-icon{color:var(--accent);display:flex;justify-content:center;margin:4px 0 6px}
+/* 4.6 トーク内のお知らせに付く共有ボタン（暗色ガラス） */
+.talk .msg.sys .sh{margin-left:8px;padding:1px 10px;font:inherit;font-size:11.5px;font-weight:700;color:#F7EDE4;
+  background:rgba(255,236,222,0.10);border:1px solid rgba(255,236,222,0.18);border-radius:999px}
+.talk .msg.sys .sh:active{background:rgba(255,236,222,0.18);transform:scale(0.97)}
+/* 共有シート（暗色ガラス）。タイルは <a> と <button> が混ざる */
+.sheet .sheet-title{margin:0 0 14px;text-align:center;font-weight:700;font-size:15px;color:#F7EDE4}
+.sheet button.tile{font:inherit;font-weight:700;font-size:clamp(14px,4vw,19px);width:100%;cursor:pointer}
+.sheet .tile .xmark{font-size:26px;line-height:1;color:#F0894A}
+.badge i svg{display:block;margin:0 auto}
+.notice-pop .ico{display:inline-flex;color:#2C8FC9}
+.stage .weather svg{flex-shrink:0}
+/* ---- 共有 ---- */
+.share{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.share a,.share button{font-size:12px;padding:8px 4px}
+/* ---- 管理 ---- */
+/* 規約・プライバシーポリシーの本文。枠・影・角丸は :root のトークンだけ */
+.legaldoc h3{font-size:14.5px;letter-spacing:.06em;margin:18px 0 6px;color:var(--ink)}
+.legaldoc h3:first-of-type{margin-top:14px}
+.legaldoc p{margin:0 0 8px;font-size:14px;line-height:1.9}
+.legaldoc ol,.legaldoc ul{margin:0 0 8px;padding-left:1.5em;font-size:14px;line-height:1.9}
+.legaldoc li{margin:2px 0}
+.legaldoc table.t{margin:4px 0 10px;font-size:12.5px}
+.legaldoc table.t th{background:var(--panel2);white-space:nowrap}
+/* 末尾の制定日は右に寄せる */
+.legaldoc > p:last-child{margin:18px 0 0;text-align:right;color:var(--muted);font-size:13px}
+table.t{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--panel)}
+table.t th,table.t td{border:1px solid var(--dash);padding:5px 8px;text-align:left;vertical-align:top}
+.tblwrap{overflow-x:auto;margin-top:8px}
+footer.ft{margin-top:30px;font-size:11.5px;color:var(--muted);text-align:center;line-height:2}
+footer.ft a{margin:0 6px}
+.hero{font-size:26px;font-weight:700;line-height:1.35;margin:18px 0 6px;letter-spacing:.02em}
+.hero em{font-style:normal;color:var(--accent)}
+.lede{font-size:14px;margin:0 0 6px}
+.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:999px;font-weight:700;font-size:13px;z-index:20;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+[hidden]{display:none!important}
+@media (min-width:700px){ .wrap{padding-top:28px} }
+/* 背の低い端末でもトップを1画面に収める */
+@media (max-height:700px){
+  /* 背景レイヤーを縮める。画像と .hero-say は同じ幅にしないと吹き出しがずれる。
+     left:50% と transform は base のまま効かせ、幅だけ差し替える */
+  .top .hero-bg,.top .hero-say{width:130%}
+  /* 短い画面は前景が上に詰まって来るので、終点だけ詰めて効きめを揃える。
+     開始45%は共通（顔の下端は42%） */
+  .top .hero-veil{background:linear-gradient(180deg,transparent 0 45%,rgba(245,238,224,.94) 71%)}
+  .top .hero-say .bubble{font-size:18px;padding:4px 12px}
+  .top .cta .action{font-size:16px;padding:12px 0}
+  .top .cta .diag-meta{margin-bottom:6px}
+  .top .cta .action.quiet{margin-top:8px}
+}
+
+/* ================= 和の渋さ（診断・結果） ================= */
+/* 背景（地色）はトップなどほかのページと同じ body の既定にそろえる。.wa は色・明朝体・レイアウトだけを持つ */
+.wa{--wa:#9C4A1F;--wa-ink:#3B2A1E;--wa-line:#C9B48F;--wa-paper:#FBF5E9;color:var(--wa-ink)}
+.wa h1,.wa h2,.wa .q-text,.wa .kicker,.wa .nm,.wa .so{font-family:'Shippori Mincho','Hiragino Mincho ProN',serif}
+/* 診断だけゴシックにして軽い印象にする。結果ページの明朝はそのまま */
+.diag .q-text{font-family:inherit}
+/* 枠は base .card の --soft-border / --r-card に委ね、外帯だけ .wa の意匠として残す。
+   同じ構造を .diag .ask にも使っている */
+.wa .card{background:var(--wa-paper);box-shadow:0 0 0 3px var(--wa-paper),0 0 0 4px var(--wa-line);padding:16px 40px 16px 16px}
+.wa .card h2{color:var(--wa);letter-spacing:.3em;font-weight:700;font-size:13px}
+.wa .row b{color:var(--wa)}
+.wa .row{border-bottom-color:var(--wa-line)}
+.wa .nm{font-size:22px;font-weight:700;letter-spacing:.14em}
+.wa .tate{position:absolute;top:70px;right:12px;writing-mode:vertical-rl;font-size:11px;letter-spacing:.3em;color:var(--wa);border-right:1px solid var(--wa-line);padding-right:6px;font-family:'Shippori Mincho',serif}
+.wa .stamp{border-color:var(--wa);color:var(--wa)}
+.wa .tag{background:#F1E7D2;border-color:var(--wa-line);color:var(--wa-ink)}
+.wa .stage .bubble{background:var(--wa-paper);color:var(--wa)}
+.wa .stage .bubble::after{background:var(--wa-paper)}
+.wa .code{background:repeating-linear-gradient(90deg,var(--wa-ink) 0 1px,transparent 1px 4px,var(--wa-ink) 4px 6px,transparent 6px 9px);height:14px}
+.wa .say,.wa .msg.tree{color:var(--wa)}
+.action.wa-btn{background:var(--wa);color:#F7EEDD;letter-spacing:.4em;text-indent:.4em}
+.wa .btn{background:var(--wa-paper)}
+.wa .obi{height:6px;background:linear-gradient(90deg,var(--wa) 30%,#E4D3AE 30%)}
+/* --- 診断：木が育つ会話形式 --- */
+/* 1画面に収まる端末では今までどおり1枚。背の低い画面（iPhone SE・横向き・文字を大きくした設定）では
+   選択肢と「ひとつ前へ」が画面の外に出るので、高さは min-height にしてページごとスクロールさせる（#70） */
+body[data-page=diagnosis] .wrap{min-height:100dvh;padding-bottom:12px;display:flex;flex-direction:column}
+.diag{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.diag > *{position:relative;z-index:1}
+.diag-meta{display:flex;justify-content:center;gap:6px;margin:4px 0 0;font-size:11px;letter-spacing:.14em;color:var(--wa)}
+.diag-meta span{border:none;border-radius:var(--r-pill);background:rgba(42,33,24,.05);color:var(--muted);font-weight:700;padding:0 8px;line-height:2}
+.diag .grow{position:relative;flex:1;min-height:0;width:100%;margin:0;pointer-events:none}
+/* 1問ごとの木の絵（背景透明の WebP）。高さいっぱいに収め、下にそろえる */
+.diag .grow .phase{display:none;position:absolute;inset:0;width:100%;height:100%;
+  object-fit:contain;object-position:center bottom}
+.diag .grow .phase.on{display:block;animation:growin .6s ease}
+@keyframes growin{from{opacity:0}to{opacity:1}}
+@keyframes phasein{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+/* 画面中央。木が育つところ */
+.grow-area{position:relative;z-index:0;flex:0 0 auto;height:max(148px,calc(100dvh - 486px));
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0}
+/* 横向きなど特に背の低い画面では、木を小さくして選択肢をなるべく画面に残す */
+@media (max-height:560px){ .grow-area{height:104px} }
+.tree-say{position:absolute;right:10px;top:6px;z-index:2;margin:0;
+  background:var(--wa-paper);border:var(--soft-border);border-radius:var(--r-btn);box-shadow:var(--soft-shadow);
+  padding:7px 16px;font-family:'Yusei Magic','Zen Kaku Gothic New',sans-serif;font-size:15px;color:var(--wa);
+  max-width:92%;text-align:center;white-space:nowrap}
+.tree-say::after{content:'';position:absolute;left:22px;bottom:-6px;width:9px;height:9px;background:var(--wa-paper);
+  border-right:var(--soft-border);border-bottom:var(--soft-border);transform:rotate(45deg)}
+.tree-say.pop{animation:phasein .5s cubic-bezier(.34,1.4,.64,1)}
+.tree-say.out{opacity:0;transition:opacity .45s ease}
+/* 全問答えたあと結果へ移るまでの画面。実がなった木を真ん中に出す */
+.diag-loading{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  padding:24px 16px;background:var(--wa-paper);animation:growin .4s ease}
+.diag-loading[hidden]{display:none}
+.diag-loading img{width:min(100%,640px);max-height:70dvh;object-fit:contain}
+.diag-loading p{margin:0;font-size:15px;letter-spacing:.14em;color:var(--wa)}
+.diag-loading .load-bar{width:min(100%,280px);height:8px;border:var(--soft-border);border-radius:var(--r-pill);background:var(--panel);overflow:hidden}
+.diag-loading .load-bar i{display:block;height:100%;background:var(--wa);transform:scaleX(0);transform-origin:left center}
+/* .wa .card と同じ構造（薄枠＋外帯）。.ask は .card ではないので枠と角丸は明示する */
+.diag .ask{position:relative;margin:12px 4px 0;background:var(--wa-paper);border:var(--soft-border);border-radius:var(--r-card);padding:12px 16px 14px;box-shadow:0 0 0 3px var(--wa-paper),0 0 0 4px var(--wa-line)}
+.diag .q-no{color:var(--wa);letter-spacing:.3em;font-size:11px}
+.diag .q-text{font-size:19px;margin:4px 0 0;line-height:1.55;min-height:calc(19px * 1.55 * 2)}
+.diag .ask.swap{animation:askin .45s ease}
+@keyframes askin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.diag .choices{margin-top:10px}
+/* 幅の狭い端末で選択肢が2行に折り返すと、木の位置がずれる。文字を少し詰めて1行に収める */
+@media (max-width:375px){ .diag .choice{font-size:14px;padding:11px 12px 11px 42px} }
+.diag .choice{background:var(--wa-paper);border:var(--soft-border);border-radius:var(--r-btn);box-shadow:var(--soft-shadow);padding:12px 16px;font-size:15px;position:relative;padding-left:46px;transition:background .15s,color .15s}
+.diag .choice::before{content:'';position:absolute;left:12px;top:50%;width:26px;height:26px;transform:translateY(-50%);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cellipse cx='12' cy='14.5' rx='8.5' ry='7.5' fill='%23FBF5E9' stroke='%239C4A1F' stroke-width='1.5'/%3E%3Cpath d='M12 8c-3-2-5.5-1-6.5 1 2.5.5 4.5.5 6.5-1zm0 0c3-2 5.5-1 6.5 1-2.5.5-4.5.5-6.5-1z' fill='%235F7F3C' stroke='%2333291C' stroke-width='.8'/%3E%3Cpath d='M12 4.5v3.5' stroke='%235F7F3C' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.diag .choice:hover{background:#F7EAD2}
+/* 面を淡くしたので、base .choice.picked の color:var(--panel)（ほぼ白）のままだと読めない。
+   枠色と同じ --wa にして選択状態を示す */
+.diag .choice.picked{background:rgba(156,74,31,.06);border-color:var(--wa);color:var(--wa)}
+.diag .choice.picked::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cellipse cx='12' cy='14.5' rx='8.5' ry='7.5' fill='%23FFD9A8' stroke='%239C4A1F' stroke-width='1.5'/%3E%3Cpath d='M12 8c-3-2-5.5-1-6.5 1 2.5.5 4.5.5 6.5-1zm0 0c3-2 5.5-1 6.5 1-2.5.5-4.5.5-6.5-1z' fill='%235F7F3C' stroke='%2333291C' stroke-width='.8'/%3E%3Cpath d='M12 4.5v3.5' stroke='%235F7F3C' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")}
+.diag .progress i{border-color:var(--wa-line);background:var(--wa-paper)}
+.diag .progress i.done{background:var(--wa)}
+.diag-foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 0 0}
+.diag-foot .is-hidden{visibility:hidden;pointer-events:none}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+/* --- 結果：読み取り → 推し柿 --- */
+.reading{min-height:calc(100dvh - 70px);display:flex;flex-direction:column;justify-content:center;padding:10px 4px 30px}
+.reading .kicker{font-size:11px;letter-spacing:.34em;color:var(--wa);margin:0 0 8px}
+.reading h1{font-size:22px;line-height:1.7;margin:0 0 16px;letter-spacing:.04em;font-weight:700}
+.ratios{margin:0 0 14px;padding:14px;background:var(--wa-paper);border:1px solid var(--wa-line)}
+.ratios.donut{display:flex;align-items:center;gap:16px}
+.donut-svg{width:118px;height:118px;flex:0 0 auto}
+.donut-track{stroke:#E4D3AE;stroke-width:16}
+.donut-legend{list-style:none;margin:0;padding:0;flex:1;min-width:0}
+.donut-legend li{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;font-size:13px;padding:4px 0}
+.donut-legend .sw{width:12px;height:12px;border-radius:3px}
+.donut-legend .lab{letter-spacing:.12em;font-weight:700}
+.donut-legend .pct{font-variant-numeric:tabular-nums;color:var(--wa);font-weight:700}
+.reading .lines{margin:0;padding:0 0 0 1.4em;font-size:15px;line-height:2}
+.reading .lines li::marker{color:var(--wa)}
+.reading .because{margin:12px 0 0;font-size:14px;color:#6B4A2A;border-left:3px solid var(--wa);padding-left:10px;line-height:1.8}
+.reading .part{margin:14px 0 0;font-size:14.5px;line-height:1.95}
+.reading .part b{display:block;color:var(--wa);letter-spacing:.06em;margin-bottom:2px}
+.reading .part p{margin:0}
+.reading .note{margin:16px 0 0;font-size:12px;color:#6B4A2A;line-height:1.8}
+.reading .so{font-size:19px;margin:24px 0 8px;letter-spacing:.06em;font-weight:700}
+.rv{opacity:0;transform:translateY(10px);animation:rv .7s ease forwards;animation-delay:calc(var(--d) * .55s)}
+@keyframes rv{to{opacity:1;transform:none}}
+.oshi{scroll-margin-top:10px;padding-top:12px}
+.reading ~ .oshi .stage{opacity:0;transform:translateY(24px) scale(.94);transition:opacity .8s ease,transform .8s cubic-bezier(.34,1.3,.64,1)}
+.oshi.in .stage{opacity:1;transform:none}
+
+/* ---- 3本の木紹介 ---- */
+/* 遊び方（/howto）＝取扱説明書の体裁。節の見出し・目次・手順・3本の比較・「● 見出し → 説明」。
+   枠と影と角丸は :root のトークンだけを使う。グラデーションは使わない */
+.manual .hero{margin-bottom:10px}
+/* 目次。押すとその節へ飛ぶ */
+.manual .toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 4px}
+.manual .toc a{font-size:12.5px;font-weight:700;text-decoration:none;color:var(--ink);
+  background:var(--panel);border:var(--soft-border);border-radius:var(--r-pill);box-shadow:var(--soft-shadow);padding:4px 12px}
+.manual .toc a:active{opacity:.85}
+.manual section{margin-top:22px;scroll-margin-top:12px}
+/* ページ内のリンク（「時間のきまり」など）で飛んだとき、上の帯に隠れないぶんを空ける。
+   帯はログイン後だけ出る（body[data-sticky-bar]）ので、そのときだけ帯の高さぶん足す */
+.manual .defs dt{scroll-margin-top:12px}
+body[data-sticky-bar] .manual section,
+body[data-sticky-bar] .manual .defs dt{scroll-margin-top:calc(64px + env(safe-area-inset-top,0px))}
+/* 節の見出し。左の縦罫はアクセント。枠ではないので .reading .because と同じ扱い */
+.manual .sec{font-size:15px;font-weight:700;letter-spacing:.14em;color:var(--ink);
+  margin:0 0 8px;padding:1px 0 1px 10px;border-left:3px solid var(--accent)}
+.manual .lede{margin:0 0 10px;color:var(--muted)}
+/* はじめかた：大きな番号を縦につなぐ */
+.manual .steps{list-style:none;margin:0;padding:0}
+.manual .steps li{position:relative;display:flex;gap:12px;align-items:flex-start;padding:0 0 16px}
+.manual .steps li:last-child{padding-bottom:0}
+/* 番号どうしをつなぐ縦線。最後の番号からは伸ばさない */
+.manual .steps li:not(:last-child)::before{content:"";position:absolute;left:15px;top:34px;bottom:4px;width:2px;background:var(--dash)}
+.manual .steps .no{flex:0 0 auto;width:32px;height:32px;display:grid;place-items:center;
+  font-size:16px;font-weight:700;color:var(--panel);background:var(--accent);border-radius:var(--r-pill)}
+.manual .steps p{margin:5px 0 0;font-size:14px}
+/* 3本を横に並べて見比べる */
+.manual .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.manual .trio .t{position:relative;text-align:center;background:var(--panel);border:var(--soft-border);
+  border-radius:var(--r-card);box-shadow:var(--soft-shadow);padding:10px 6px 12px}
+.manual .trio .art svg,.manual .trio .art .char-img{width:100%;max-width:92px;height:auto;display:block;margin:0 auto}
+.manual .trio .nm{display:block;font-size:14px;margin:2px 0 3px}
+/* 3列だと丸枠のタグは文字が途中で折れて不格好になるので、ここでは素の文字で置く */
+/* 「平和主義・ムードメーカー」が 1px 足りずに折り返し、「ー」だけが次の行に落ちていた。札の左右の余白（6px）に少し食い込ませて1行に収める */
+.manual .trio .role{display:block;margin:0 -4px;font-size:11px;line-height:1.45;color:var(--muted)}
+.manual .trio .stamp{width:36px;height:36px;top:-10px;right:-2px;font-size:9.5px;line-height:1.1}
+.manual .trio .ct{margin:5px 0 0;font-size:12px;font-weight:700}
+.manual .trio .ds{margin:5px 0 0;font-size:12px;line-height:1.6;text-align:left}
+.manual .trio .loc{display:block;margin-top:5px;font-size:11px;color:var(--muted)}
+/* ● 見出し → 説明。表組みの行（左に項目・右に説明）はやめた */
+.manual .defs{margin:12px 0 0}
+.manual .defs dt{font-weight:700;font-size:14px;margin:12px 0 0;padding-left:16px;position:relative}
+.manual .defs dt:first-of-type{margin-top:0}
+.manual .defs dt::before{content:"";position:absolute;left:1px;top:.52em;width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.manual .defs dt .ct{font-weight:400;font-size:13px;color:var(--muted)}
+.manual .defs dd{margin:3px 0 0;padding-left:16px;font-size:13.5px;position:relative}
+.manual .defs dd::before{content:"→";position:absolute;left:0;top:0;color:var(--muted)}
+/* 関連する節へ飛ぶ小さな導線 */
+.manual .jump{display:inline-block;margin-top:4px;font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none}
+.manual .jump::before{content:"→ "}
+.manual .jump:active{opacity:.85}
+/* 画面の略図 */
+.manual .screenmap{margin:0 0 4px;padding:10px 6px 6px;background:var(--panel);border:var(--soft-border);
+  border-radius:var(--r-card);box-shadow:var(--soft-shadow);text-align:center}
+.manual .screenmap svg{width:100%;max-width:320px;height:auto;display:block;margin:0 auto}
+.manual .screenmap figcaption{margin-top:4px}
+/* 「こんなときは」。困りごとが見出し、答えが説明。見出しは文になるので字間を詰めない */
+.manual .defs.qa dt{font-size:13.5px;line-height:1.5}
+/* スマホ幅では3列だと1行8文字ほどで折れて読めないので、縦に積んで絵を左・文を右に置く。
+   3本を見比べる並びは、横に余裕のある画面だけにする */
+@media (max-width:479px){
+  .manual .trio{grid-template-columns:1fr;gap:10px}
+  .manual .trio .t{display:flex;gap:12px;align-items:flex-start;text-align:left;padding:12px}
+  .manual .trio .art{flex:0 0 84px}
+  .manual .trio .art svg,.manual .trio .art .char-img{max-width:84px}
+  .manual .trio .tx{flex:1;min-width:0}
+  .manual .trio .nm{margin:0 0 2px}
+  .manual .trio .ds{font-size:12.5px}
+  .manual .trio .stamp{top:-10px;right:-4px}
+}
+
+/* ================= 新ホーム：キャラ全画面＋トークを重ねる ================= */
+body[data-page=home]{overflow:hidden;background:#2A1F1A}
+/* 保険（案C）：それでも入力欄が画面の下に隠れてしまったときだけ、指で手繰り寄せられるようにする。
+   ふだんは data-cut が付かないので、いままでどおり動かない（見た目も操作感も変わらない）。
+   バーは出さない（出すと、隠れていないときにも線が見えることがある） */
+.scene[data-cut='1']{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.scene[data-cut='1']::-webkit-scrollbar{display:none}
+
+/* 高さは「いま本当に見えている高さ」（--app-h）を画面側が測って入れる（public/app.js の fitApp）。
+   ブラウザの言い値（100dvh）は、ほかの画面を下までスクロールしてツールバーが隠れたあとなどに
+   実際より大きくなることがあり、そのぶん入力欄が画面の外に出てしまう。100dvh は測る前の控え */
+body[data-page=home] .wrap{max-width:none;height:var(--app-h,100dvh);padding:0;overflow:hidden}
+.scene{position:relative;height:var(--app-h,100dvh);overflow:hidden;display:flex;flex-direction:column;
+  /* キャラの頭の位置（ヘッダーの下） */
+  /* 頭の始まり。ヘッダーと帯の箱（.home-top）の高さを画面側が測って入れ直す（public/app.js）。
+     ここの値は、測る前の1コマで使う目安（ヘッダー約70px＋帯35px） */
+  --char-top:calc(105px + env(safe-area-inset-top));
+  /* トークの始まる位置（#197）。立ち絵は 820×820 の正方形を幅いっぱいに置くので「キャラの高さ＝画面の幅」。
+     その 70% の位置から重ねると、画面の大きさによらずキャラの下 30% だけがトークの後ろに入る。
+     60dvh は横長の画面でトークが画面の外に出ないための上限 */
+  --talk-top:min(calc(var(--char-top) + 70vw), 60dvh)}
+/* 背景の柿園はぼかして、キャラだけにピントを合わせる */
+.scene-bg{position:absolute;inset:-24px;z-index:0;pointer-events:none}
+.scene-bg svg{width:100%;height:100%;display:block;filter:blur(7px) saturate(.92) brightness(1.02)}
+/* 季節の絵（publicimg/season/）。SVG の上に重ねるので、絵が読み込めないときは下の SVG がそのまま予備になる。
+   cover で画面いっぱいにし、木の並び（絵の上下の真ん中より少し下）が画面の真ん中に来るよう 58% で合わせる。
+   ぼかしは SVG より弱くして、季節が絵で分かるようにする */
+.scene-bg .scene-photo{position:absolute;inset:0;background-size:cover;background-position:center 58%;
+  background-repeat:no-repeat;filter:blur(3px) saturate(.96)}
+.scene-bg[data-season=spring] .scene-photo{background-image:url(img/season/spring.webp)}
+.scene-bg[data-season=summer] .scene-photo{background-image:url(img/season/summer.webp)}
+.scene-bg[data-season=autumn] .scene-photo{background-image:url(img/season/autumn.webp)}
+.scene-bg[data-season=winter] .scene-photo{background-image:url(img/season/winter.webp)}
+.scene-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(42,31,26,.10) 0 32%,rgba(247,240,224,.16) 60%,rgba(247,240,224,.30))}
+/* ===== 今日のこと（#277、意見28）=====
+   ヘッダーのすぐ下に1行の帯。押すと時間つきの一覧が開く。
+   帯は必ず1行に収める（折り返さない）。入りきらないぶんは画面側で「+n」にまとめている */
+.today{position:relative}
+.today .band{display:flex;align-items:center;gap:6px;width:100%;padding:5px 12px;border:none;
+  background:rgba(20,16,13,.52);backdrop-filter:blur(8px);color:#F7EEDD;cursor:pointer;
+  font:inherit;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-align:left;
+  white-space:nowrap;overflow:hidden}
+.today .band:active{opacity:.85}
+.today .sum{flex:0 0 auto;color:#FFD9B8}
+.today .sum.all{color:var(--ok-light)}
+.today .tg{flex:0 0 auto;display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:var(--r-pill);
+  background:rgba(255,252,244,.14)}
+.today .tg small{font-size:10px;font-weight:400;opacity:.85}
+.today .tg .ck{display:none}
+.today .tg.done .ck{display:inline-flex}
+/* 終わったもの：チェックを付けて薄く、線を引く */
+.today .tg.done{opacity:.55;text-decoration:line-through}
+/* いま受付中：柿色で目立たせる */
+.today .tg.now{background:var(--accent);color:#fff}
+/* やらずに終わった・お休み：薄く */
+.today .tg.missed,.today .tg.off{opacity:.5}
+.today .tg.more{background:none;padding:2px 2px;opacity:.7}
+.today .cv{margin-left:auto;flex:0 0 auto;display:inline-flex;opacity:.7;transition:transform .2s ease}
+.today .band[aria-expanded=true] .cv{transform:rotate(90deg)}
+/* 開いたときの一覧 */
+/* 開いた一覧は浮かせる。箱の高さが変わらないので、立ち絵の位置が動かない */
+.today .list{position:absolute;left:0;right:0;top:100%;z-index:4;list-style:none;margin:0;padding:6px 12px 10px;background:rgba(20,16,13,.82);backdrop-filter:blur(8px);
+  color:#F7EEDD;font-size:13px;animation:today-open .22s ease}
+@keyframes today-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.today .list li{display:flex;align-items:baseline;gap:8px;padding:4px 0}
+.today .list li + li{border-top:1px solid rgba(255,252,244,.12)}
+.today .list .ck{flex:0 0 14px;display:inline-flex;color:var(--ok-light)}
+.today .list .tnm{flex:1 1 auto;min-width:0}
+.today .list .tnm small{font-size:11px;opacity:.7;font-weight:400}
+.today .list .tst{flex:0 0 auto;font-size:11.5px;opacity:.8}
+/* まだのものは印を出さないが、名前の位置がそろうよう場所は空けておく */
+.today .list li:not(.done) .ck{visibility:hidden}
+.today .list li.done{opacity:.55;text-decoration:line-through}
+.today .list li.now .tst{color:#FFB84D;font-weight:700}
+.today .list li.missed,.today .list li.off{opacity:.5}
+/* 「視差効果を減らす」がオンの人には、開くときの動きを出さない */
+@media (prefers-reduced-motion:reduce){ .today .list{animation:none} .today .cv{transition:none} }
+
+/* いまの畑の札（天気・気温・湿度）。景色の右上に小さく置く。
+   - 上下の位置はヘッダー＋帯の下（--char-top）。帯の一覧を開いているあいだは、その高さ（--today-h）だけ下げる
+   - 明るい空の上でも、暗い葉の上でも読めるよう、淡い面＋すりガラス＋縁で浮かせる
+   - 立ち絵（z-index:1）より前、トーク（3）・ヘッダー（5）・水やりのお知らせ（20）より後ろ */
+.env-card{position:absolute;right:10px;top:calc(var(--char-top) + 8px);z-index:2;
+  display:flex;align-items:center;padding:4px 9px;border-radius:var(--r-pill);
+  background:rgba(255,252,244,.72);backdrop-filter:blur(8px) saturate(1.1);
+  border:var(--soft-border);box-shadow:0 2px 8px rgba(12,9,7,.22);
+  pointer-events:auto}
+/* マークと文字の空き（4px）、組と組の空き（10px）をそろえる */
+.env-card .env-strip{color:var(--ink);font-size:12px;gap:10px}
+.env-card .env-strip span{gap:4px}
+.env-card .env-strip svg{color:var(--accent)}
+/* 帯の一覧を開いているあいだは隠す（立ち絵の葉にかかって窮屈に見えるため）。たたむとまた出る */
+.scene[data-today=open] .env-card{display:none}
+/* 水やりのお知らせが出ているあいだは、お知らせを優先して隠す（:has が使えないブラウザでは、
+   お知らせ（z-index:20）が札の上に重なるだけで、押せなくなるものは無い） */
+.scene:has(#notice-pop) .env-card{display:none}
+
+/* キャラ（ピントが合っている側）。頭はヘッダーのすぐ下から（#197） */
+.scene-char{position:absolute;left:0;right:0;top:var(--char-top);
+  bottom:var(--dock-h,calc(70px + env(safe-area-inset-bottom)));z-index:1;
+  display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:1}
+/* object-position:top は、箱の中で絵を上づめにする。align-items では動かない
+   （絵は箱いっぱいの大きさで、中身の位置を決めるのは object-fit/object-position のため） */
+.scene-char svg,.scene-char .char-img{width:100%;height:100%;display:block;object-fit:contain;object-position:top;
+  filter:drop-shadow(0 12px 22px rgba(20,14,10,.4))}
+
+/* ===== 立ち絵の動き（試作） =====
+   1枚の絵のまま「生きている感じ」を出す。動かすのは transform だけなので、古い端末でも軽い。
+   呼吸は絵（.char-img）、跳ねは包みの button（.char-tap）に掛ける。
+   同じ要素に2つの animation で transform を掛けると打ち消し合うので、2階に分ける */
+/* 呼吸は控えめ（上下3px・たて0.8%・6秒に1回）、跳ねははっきり（12px）。
+   実機の動画を見て決めた組み合わせ。強さを変えるときは、この4つの数字だけを触る */
+.scene-char{--mo-y:3px;--mo-s:1.008;--mo-t:6s;--mo-hop:12px}
+/* のどが渇いているときはゆっくり小さく、水やりのあとはしばらく元気に（跳ねの大きさは変えない） */
+.scene-char[data-state=thirsty]{--mo-y:2px;--mo-s:1.005;--mo-t:8s}
+.scene-char[data-mood=happy]{--mo-y:5px;--mo-s:1.014;--mo-t:4s}
+
+/* ふれられるように。箱いっぱいに広げ、見た目は変えない */
+.scene-char{pointer-events:none}
+.scene-char .char-tap{position:absolute;inset:0;width:100%;height:100%;padding:0;border:none;background:none;
+  pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.scene-char .char-tap:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:12px}
+
+/* 呼吸：数秒に1回、ゆっくり少しだけ伸び縮み。足元を軸にして、浮かんで見えないようにする */
+.scene-char .char-img{transform-origin:50% 100%;animation:char-breathe var(--mo-t) ease-in-out infinite}
+/* 今日のことを開いているあいだは、立ち絵を少し小さくして一覧を読みやすくする（#277）。
+   呼吸と跳ねは transform を使っているので、こちらは包みの .scene-char に掛けて打ち消さない */
+.scene[data-today=open] .scene-char{transform:scale(.88);transform-origin:50% 100%;transition:transform .22s ease}
+@media (prefers-reduced-motion:reduce){ .scene[data-today=open] .scene-char{transition:none} }
+@keyframes char-breathe{
+  0%,100%{transform:translateY(0) scaleY(1)}
+  50%{transform:translateY(calc(var(--mo-y) * -1)) scaleY(var(--mo-s))}
+}
+/* 返事のとき・ふれたときの、ぴょんと1回 */
+.scene-char .char-tap.hop{animation:char-hop .62s cubic-bezier(.34,1.3,.64,1)}
+@keyframes char-hop{
+  0%{transform:translateY(0) scaleY(1)}
+  28%{transform:translateY(calc(var(--mo-hop) * -1)) scaleY(1.04)}
+  58%{transform:translateY(0) scaleY(.97)}
+  80%{transform:translateY(calc(var(--mo-hop) * -.25)) scaleY(1.01)}
+  100%{transform:translateY(0) scaleY(1)}
+}
+.scene-char .char-tap{transform-origin:50% 100%}
+
+/* ふれたときのひとこと。トークの上に短いあいだだけ出す。読みにくくならないよう、動きは出入りだけ */
+.char-say{position:absolute;left:50%;top:12%;transform:translateX(-50%);z-index:2;max-width:min(82%,320px);
+  /* 面の色・文字の色は、ホームを明るくする指定（.char-say、下のほう）でまとめて決める */
+  padding:8px 14px;border-radius:16px;font-size:14px;line-height:1.5;
+  text-align:center;pointer-events:none;animation:char-say-in .34s cubic-bezier(.34,1.3,.64,1)}
+@keyframes char-say-in{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
+.char-say.out{animation:char-say-out .3s ease forwards}
+@keyframes char-say-out{to{opacity:0;transform:translate(-50%,-6px)}}
+
+/* 「視差効果を減らす」がオンの人には動かさない。ふれたときのひとことは出す（動きだけ止める） */
+@media (prefers-reduced-motion:reduce){
+  .scene-char .char-img,.scene-char .char-tap.hop,.char-say,.char-say.out{animation:none}
+}
+/* ホームのヘッダー：ロゴ・ポイント・4タイルメニュー */
+/* ヘッダーと「今日のこと」の帯をまとめた箱（#277）。画面の上に重ねるのはこちら */
+.home-top{position:absolute;left:0;right:0;top:0;z-index:5}
+.home-header{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:rgba(20,16,13,.62);backdrop-filter:blur(10px);position:relative;z-index:7} /* ランクの吹き出しを、帯や「ホーム画面に追加」の案内より前に出すため */
+.home-header .logo{border:none;box-shadow:none;background:none;color:#F7EEDD;padding:0;letter-spacing:.1em;font-size:14px}
+.home-header .right{display:flex;align-items:center;gap:8px}
+.home-header .pt{font-weight:700;font-size:13px;color:#FFD9B8;font-variant-numeric:tabular-nums}
+
+/* ヘッダーのランク（#275）。絵・次の段までのバー・ポイントを縦に積む。
+   PC では出さない（左の列の「わたしの記録」に大きく出すため。下の 1024px の指定） */
+.rank-wrap{position:relative;flex:0 0 auto}
+.rank-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:0;border:none;background:none;cursor:pointer}
+.rank-btn .art{width:40px;height:40px;display:block}
+/* 名前は rbar。サイト共通のヘッダーの帯も .bar なので、ぶつからないようにする */
+.rank-btn .rbar{width:40px;height:4px;border-radius:var(--r-pill);background:rgba(255,252,244,.25);overflow:hidden}
+.rank-btn .rbar i{display:block;height:100%;background:#F0894A;border-radius:var(--r-pill)}
+.rank-btn .pt{font-size:10.5px;line-height:1.1}
+.rank-btn:active{opacity:.85}
+/* 吹き出し。ヘッダーの下に出す。閉じているあいだは hidden（読み上げにも出さない） */
+/* 「ホーム画面に追加」の案内（z-index:6）に隠れないよう、ひとつ上に置く */
+.rank-pop{position:absolute;top:calc(100% + 6px);right:0;z-index:7;display:flex;flex-direction:column;gap:2px;
+  max-width:calc(100vw - 24px);padding:8px 12px;border-radius:12px;background:rgba(20,16,13,.92);color:#F7EEDD;
+  box-shadow:0 6px 18px rgba(12,9,7,.4);text-align:left}
+.rank-pop b{font-size:14px;letter-spacing:.08em}
+/* 「4pt・次のなえまであと11pt」が「あと」と「11pt」に割れると読みにくいので、1行のまま出す */
+.rank-pop small{font-size:11.5px;color:rgba(247,237,228,.75);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* 幅の狭い端末では絵を小さくする。運営にはスパナも出るので、40px のままだと 360px で詰まる（実測） */
+@media (max-width:374px){
+  .rank-btn .art{width:32px;height:32px}
+  .rank-btn .rbar{width:32px}
+}
+.tiles-btn{width:38px;height:38px;flex-shrink:0;border:none;border-radius:12px;background:rgba(255,252,244,.16);display:grid;place-items:center;padding:0}
+.ai-btn{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;color:rgba(247,237,228,0.55)}
+.ai-btn:active{background:rgba(255,236,222,0.18)}
+.tiles-btn svg{width:20px;height:20px;fill:#F7EEDD}
+/* トーク：透明のまま、キャラの顔から下にだけ重ねる */
+.talk{position:absolute;left:0;right:0;top:var(--talk-top);bottom:var(--dock-h,calc(70px + env(safe-area-inset-bottom)));z-index:3;overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;padding:0 12px 12px;
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 46px);mask-image:linear-gradient(180deg,transparent 0,#000 46px)}
+.talk .chat{margin:46px 0 0;gap:8px}
+.talk .msg{border:none;border-radius:16px;box-shadow:none;backdrop-filter:blur(9px) saturate(1.15);max-width:82%;text-shadow:0 1px 3px rgba(12,9,7,.75)}
+.talk .msg.tree{background:rgba(20,16,13,.68);color:#F7EEDD;position:relative;margin-left:44px;max-width:calc(82% - 44px)}
+/* 相手のアイコンは推し柿の顔（#271）。ヘッダーの TreeIcon と同じ画像を使う。
+   どの木かは .scene の data-slug で受け取る。絵が無いときは、下の既定の柿の絵がそのまま出る */
+.talk .msg.tree::before{content:'';position:absolute;left:-44px;top:0;width:36px;height:36px;border-radius:50%;
+  background:rgba(255,252,244,.92) url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='24' cy='28' rx='17' ry='15' fill='%23E8712C' stroke='%2333291C' stroke-width='2'/><path d='M24 14c-6-4-11-2-13 2 5 1 9 1 13-2zm0 0c6-4 11-2 13 2-5 1-9 1-13-2z' fill='%235F7F3C' stroke='%2333291C' stroke-width='1.5'/><path d='M24 8v6' stroke='%235F7F3C' stroke-width='3' stroke-linecap='round'/><path d='M17 24q3 3 6 0' stroke='%2333291C' stroke-width='1.5' fill='none' opacity='.35'/></svg>") center/22px 22px no-repeat;
+  box-shadow:0 1px 4px rgba(12,9,7,.35)}
+.scene[data-slug=a] .talk .msg.tree::before{background-image:url(img/char-a-icon.png);background-size:34px 34px}
+.scene[data-slug=b] .talk .msg.tree::before{background-image:url(img/char-b-icon.png);background-size:34px 34px}
+.scene[data-slug=c] .talk .msg.tree::before{background-image:url(img/char-c-icon.png);background-size:34px 34px}
+.talk .msg.human{background:rgba(20,16,13,.76);color:#FFD9B8;font-family:inherit;position:relative;margin-right:44px;max-width:calc(82% - 44px)}
+.talk .msg.human::before{content:'';position:absolute;right:-44px;top:0;width:36px;height:36px;border-radius:50%;
+  background:rgba(255,252,244,.92) url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><ellipse cx='24' cy='41' rx='15' ry='9' fill='%234E6E8C' stroke='%2333291C' stroke-width='2'/><circle cx='24' cy='25' r='9' fill='%23F2CBA3' stroke='%2333291C' stroke-width='2'/><path d='M24 27.5q3 2 6 0' stroke='%2333291C' stroke-width='1.4' fill='none' stroke-linecap='round'/><path d='M15.5 17a8.5 7.5 0 0 1 17 0z' fill='%23E3C37E' stroke='%2333291C' stroke-width='2'/><ellipse cx='24' cy='17' rx='16' ry='4' fill='%23E3C37E' stroke='%2333291C' stroke-width='2'/></svg>") center/24px 24px no-repeat;
+  box-shadow:0 1px 4px rgba(12,9,7,.35)}
+.talk .msg.thinking{background:rgba(20,16,13,.5);color:#CDBFA9}
+.talk .msg.sys{align-self:center;background:rgba(20,16,13,.74);color:#F3EAD5;font-size:12px;padding:5px 14px;border-radius:999px;max-width:92%;text-align:center}
+.talk .choices-in{align-self:stretch;max-width:100%;background:none;box-shadow:none;padding:0;display:grid;gap:6px}
+.talk .qc{text-align:left;background:rgba(20,16,13,.7);border:1.5px solid rgba(247,238,221,.45);border-radius:14px 4px 14px 4px;
+  padding:11px 14px;font-size:14.5px;color:#F7EEDD;box-shadow:none;backdrop-filter:blur(9px);text-shadow:0 1px 3px rgba(12,9,7,.75)}
+.talk .qc:active{transform:translateY(1px)}
+/* 下部バー：ナビ → アクション → 入力欄 */
+.dock{position:relative;z-index:4;margin-top:auto;display:flex;align-items:flex-end;gap:6px;
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:rgba(20,16,13,.62);backdrop-filter:blur(10px)}
+.quiz-wrap{flex:0 0 auto;width:46px;display:flex;flex-direction:column;align-items:center;gap:2px;align-self:center}
+.quiz-btn{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,236,222,0.18);
+  background:rgba(255,236,222,0.10);color:#F0894A;display:grid;place-items:center;padding:0;
+  transition:background 120ms ease,transform 120ms ease}
+.quiz-btn:active{background:rgba(255,236,222,0.18);transform:scale(0.94)}
+.quiz-btn:disabled{opacity:.34;cursor:not-allowed}
+.quiz-label{font-size:11px;line-height:1;color:rgba(247,237,228,0.62)}
+.dock form{flex:1;min-width:0;margin:0;display:flex;gap:2px;align-items:flex-end;
+  background:rgba(20,16,13,.72);border-radius:21px;padding:0 4px 0 0}
+.dock form:focus-within{box-shadow:0 0 0 1.5px rgba(247,238,221,.45) inset}
+.dock textarea{flex:1;min-width:0;min-height:0;height:42px;max-height:34dvh;overflow-y:auto;resize:none;
+  border:none;border-radius:0;padding:10px 14px;font:inherit;font-size:15px;line-height:1.5;
+  background:transparent;color:#F7EEDD;-webkit-appearance:none;
+  overflow-wrap:anywhere;scrollbar-width:none;-ms-overflow-style:none}
+.dock textarea::-webkit-scrollbar{display:none}
+.dock textarea::placeholder{color:rgba(247,238,221,.62)}
+.dock textarea:focus{outline:none}
+.dock .send{flex-shrink:0;width:46px;height:46px;border:none;border-radius:0;background:none;padding:0;
+  display:grid;place-items:center;filter:drop-shadow(0 2px 4px rgba(12,9,7,.5))}
+.dock .send svg{width:100%;height:100%;display:block}
+.dock .send:active{transform:translateY(1px)}
+.dock .send:disabled{opacity:.4;filter:none}
+/* iPhone は 16px 未満の入力欄を押すと画面を拡大する。スマホ幅だけ 16px にし、行が増えた分は上下の余白で吸収して高さ 42px を保つ（#67） */
+@media (max-width:519px){ .dock textarea{font-size:16px;padding-top:9px;padding-bottom:9px} }
+/* 4タイルのナビ（暗色ガラス） */
+.sheet{position:fixed;inset:0;z-index:30;display:none}
+.sheet.open{display:block}
+.sheet .bg{position:absolute;inset:0;background:rgba(38,22,14,0.80);
+  backdrop-filter:blur(16px) saturate(1.15);-webkit-backdrop-filter:blur(16px) saturate(1.15);
+  opacity:0;transition:opacity 180ms ease}
+.sheet.open .bg{opacity:1}
+/* パネルは「タイル列480px＋左右の余白1つ分」。中身の幅が 480px に定まり、
+   端から --sheet-gutter の位置にある閉じるボタンがタイルの右端と揃う。
+   position は absolute のまま。inset:0 と margin:0 auto で中央に寄る。
+   relative にすると inset:0 が効かず、閉じるボタンの基準も失われる */
+.sheet .panel{--sheet-gutter:5vw;
+  position:absolute;inset:0;max-width:calc(480px + var(--sheet-gutter) * 2);margin:0 auto;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:env(safe-area-inset-top) var(--sheet-gutter) env(safe-area-inset-bottom);color:var(--menu-text)}
+.sheet-close{position:absolute;top:calc(env(safe-area-inset-top) + 10px);right:var(--sheet-gutter);width:34px;height:34px;
+  border-radius:10px;background:rgba(255,236,222,0.10);border:1px solid rgba(255,236,222,0.18);
+  color:#F7EDE4;display:flex;align-items:center;justify-content:center;padding:0;
+  transition:background 120ms ease,transform 120ms ease}
+.sheet-close:active{background:rgba(255,236,222,0.18);transform:scale(0.94)}
+/* 遊び方の「ホーム画面に追加する」。明色系の面なので、枠・影・角丸はトークンで */
+.manual .a2hs-howto{display:flex;flex-direction:column;gap:12px}
+.manual .a2hs-howto > div{background:var(--panel);border:var(--soft-border);border-radius:var(--r-card);
+  box-shadow:var(--soft-shadow);padding:14px}
+.manual .a2hs-howto .nm{display:block;margin:0 0 10px;font-size:14px}
+.manual .a2hs-howto .note{margin:10px 0 0;font-size:12.5px;line-height:1.7;color:var(--muted)}
+.manual .a2hs-steps li::before{background:var(--panel2);border:var(--soft-border);color:var(--ink)}
+.manual .a2hs-steps .ic{background:var(--panel2);border:var(--soft-border);color:var(--accent)}
+@media (min-width:520px){.manual .a2hs-howto{flex-direction:row}.manual .a2hs-howto > div{flex:1 1 0;min-width:0}}
+
+/* 設定の通知：ホーム画面に追加すれば使える、という案内 */
+.a2hs-hint{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.a2hs-hint p{margin:0;flex:1 1 auto;min-width:0}
+.a2hs-hint .btn{flex:0 0 auto}
+
+/* ホームの上に一度だけ出す案内。暗色ガラスのホームに重ねるので、メニューと同じ色味にする */
+/* 上端はヘッダーと「今日のこと」の帯の下（--char-top は public/app.js が測る。#277）。決め打ちにすると帯を隠して押せなくなる */
+.a2hs-banner{position:absolute;left:10px;right:10px;top:calc(var(--char-top) + var(--today-h,0px) + 6px);z-index:6;
+  background:rgba(38,22,14,0.80);border:1px solid rgba(255,236,222,0.18);border-radius:16px;
+  padding:12px 14px;color:var(--menu-text)}
+.a2hs-banner p{margin:0 0 10px;font-size:13.5px;line-height:1.7}
+.a2hs-banner .acts{display:flex;gap:8px}
+.a2hs-banner .btn{flex:1 1 0;background:rgba(255,236,222,0.10);border:1px solid rgba(255,236,222,0.18);
+  box-shadow:none;color:var(--menu-text);font-size:13.5px;padding:10px}
+.a2hs-banner .btn:active{background:rgba(255,236,222,0.18);transform:scale(0.97);opacity:1}
+.a2hs-banner .btn.quiet{background:none}
+/* PC では出さない（案内はスマホ向け） */
+@media (min-width:1024px){.a2hs-banner{display:none}}
+
+/* ---- ホーム画面に追加する（#196） ----
+   シートは4タイルのメニューと同じ暗色ガラス。下から出す */
+.sheet.a2hs .panel{justify-content:flex-end;padding-bottom:calc(env(safe-area-inset-bottom) + 18px)}
+.sheet.a2hs .box{background:rgba(255,236,222,0.10);border:1px solid rgba(255,236,222,0.18);border-radius:16px;
+  padding:20px 18px 18px;transform:translateY(12px);opacity:0;
+  transition:transform 220ms cubic-bezier(.22,1,.36,1),opacity 180ms ease}
+.sheet.a2hs.open .box{transform:none;opacity:1}
+.sheet.a2hs h2{margin:0 0 14px;font-size:17px;letter-spacing:.08em}
+.sheet.a2hs .lead{margin:0 0 12px;font-size:14px;line-height:1.8}
+.sheet.a2hs .note{margin:14px 0 0;font-size:12.5px;line-height:1.7;color:var(--menu-text-muted)}
+.sheet.a2hs p{margin:0 0 10px;font-size:14px;line-height:1.8}
+/* シートの中のボタンは、暗色ガラスの面に合わせる（明色系の .btn とは別の見た目） */
+.sheet.a2hs .btn{background:rgba(255,236,222,0.10);border:1px solid rgba(255,236,222,0.18);
+  box-shadow:none;color:var(--menu-text);font-size:15px;padding:14px}
+.sheet.a2hs .btn:active{background:rgba(255,236,222,0.18);transform:scale(0.97);opacity:1}
+.sheet.a2hs .btn.block{display:block;width:100%}
+
+/* PC で両方を並べるとき。縦に積み、小見出しで分ける。
+   手順が6つぶんになるので、画面が低いときはシートの中だけスクロールさせる */
+.sheet.a2hs .box{max-height:calc(100dvh - 90px);overflow-y:auto}
+.sheet.a2hs .a2hs-both{display:flex;flex-direction:column;gap:16px}
+.sheet.a2hs .a2hs-both .nm{display:block;margin:0 0 10px;font-size:13.5px;color:var(--menu-text-muted)}
+
+/* 手順。番号つきの縦並びで、左にアイコン */
+.a2hs-steps{list-style:none;margin:0;padding:0;counter-reset:a2hs;display:flex;flex-direction:column;gap:12px}
+.a2hs-steps li{display:flex;align-items:flex-start;gap:12px;font-size:14px;line-height:1.7;counter-increment:a2hs}
+.a2hs-steps li::before{content:counter(a2hs);flex:0 0 auto;width:22px;height:22px;margin-top:3px;
+  border-radius:var(--r-pill);font-size:12px;font-weight:700;display:grid;place-items:center}
+.a2hs-steps .ic{flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;border-radius:var(--r-btn)}
+.sheet.a2hs .a2hs-steps li::before{background:rgba(255,236,222,0.10);border:1px solid rgba(255,236,222,0.18);color:var(--menu-text)}
+.sheet.a2hs .a2hs-steps .ic{background:rgba(255,236,222,0.10);border:1px solid rgba(255,236,222,0.18);color:#F0894A}
+
+.sheet .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:480px;margin:0 auto}
+.sheet .tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;aspect-ratio:1;
+  border-radius:16px;border:1px solid rgba(255,236,222,0.18);background:rgba(255,236,222,0.10);text-decoration:none;
+  font-weight:700;font-size:clamp(14px,4vw,19px);color:var(--menu-text);
+  opacity:0;transform:translateY(8px);transition:background 120ms ease,transform 200ms ease,opacity 200ms ease}
+.sheet.open .tile{opacity:1;transform:none}
+.sheet.open .tile:nth-child(1){transition-delay:0ms}
+.sheet.open .tile:nth-child(2){transition-delay:40ms}
+.sheet.open .tile:nth-child(3){transition-delay:80ms}
+.sheet.open .tile:nth-child(4){transition-delay:120ms}
+.sheet.open .tile:nth-child(5){transition-delay:160ms}
+.sheet.open .tile:nth-child(6){transition-delay:200ms}
+.sheet .tile:active{background:rgba(255,236,222,0.18);transform:scale(0.97)}
+.sheet .tile svg{color:#F0894A}
+.sheet .tile.wide{grid-column:span 2;aspect-ratio:auto;flex-direction:row;justify-content:flex-start;padding:16px;gap:12px}
+/* 会話の画面へ戻るタイル。いちばん上に置き、ほかより少しだけ明るくして戻り道だと分かるようにする */
+/* ホームに戻るタイル：ほかのタイルより一段明るい暖色の面。rgba(255,255,255,*) は使わない（暖色を残すため） */
+.sheet .tile.back{justify-content:center;background:rgba(255,236,222,0.16);border-color:rgba(255,236,222,0.26)}
+@media(prefers-reduced-motion:reduce){
+  .sheet .bg,.sheet .tile,.sheet-close{transition:none}
+  .sheet .tile{opacity:1;transform:none}
+}
+@media (min-width:520px){ .scene{max-width:480px;margin:0 auto;box-shadow:0 0 40px rgba(0,0,0,.35)} }
+
+/* ================= 対面（結果→会いに行く）：1画面・キャラが自己紹介 ================= */
+/* ゲスト時の #oshi。スクロールなしで1枚に収め、副導線で下に展開できる */
+/* 名前＋キャラ＋一言＋紹介を1かたまりで中央寄せ（余白は上下に分散＝名前が浮かない）。
+   キャラは大きめ、全体は1画面に収める */
+.oshi-solo{min-height:calc(100dvh - 62px);display:flex;flex-direction:column;padding-top:6px}
+.oshi-solo .stage{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;margin:0}
+.oshi-solo .stage svg,.oshi-solo .stage .char-img{flex:0 0 auto;width:min(66vw,270px);max-height:38dvh}
+.oshi-solo .stage .nameplate{font-size:17px;flex:0 0 auto;margin:0}
+.oshi-solo .stage .bubble{font-size:15.5px;max-width:90vw;margin-top:6px;flex:0 0 auto}
+.oshi-solo .oshi-cta{flex:0 0 auto;padding:6px 0 4px}
+.oshi-solo .oshi-cta .action{margin-top:0}
+.oshi-solo .subnav{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.oshi-solo .subnav button{background:var(--panel);border:var(--soft-border);border-radius:var(--r-pill);
+  box-shadow:var(--soft-shadow);color:var(--ink);font-weight:700;font-size:13px;padding:8px 14px}
+.oshi-solo .subnav button:active{opacity:.85}
+/* 副導線で開くカードは、通常のカードとして下に出す（開いたらスクロール可） */
+.oshi-solo .reveal{margin-top:14px}
+
+/* ================= 結果の共有3択（iPhone想定・縦積みの大きめボタン） ================= */
+.share3{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.share3 .sbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  padding:13px 14px;border-radius:var(--r-pill);font-weight:700;font-size:15px;text-decoration:none;
+  border:var(--soft-border);box-shadow:var(--soft-shadow);text-align:center}
+.share3 .sbtn:active{opacity:.85}
+.share3 .sbtn .ic{font-size:17px;line-height:1;display:inline-flex}
+.share3 .sx{background:#111;color:#fff;border-color:#111}
+.share3 .slink{background:var(--panel);color:var(--ink)}
+.share3 .simg{background:var(--accent);color:#fff;border-color:transparent}
+
+/* ================= 対面（oshi-solo） ================= */
+/* 下タブが無い結果ページの余白（下の謎空間）を詰める */
+body[data-page=result] .wrap{padding-bottom:14px}
+
+/* 対面：ログインの理由の1行（設計書 4.3）。ボタンのすぐ上に添える */
+.oshi-solo .login-reason{margin:0 0 8px;text-align:center;font-size:13.5px;color:var(--wa);font-family:'Shippori Mincho','Hiragino Mincho ProN',serif;letter-spacing:.04em}
+/* 対面：豆知識。CTA の下に置き、1画面の構成は崩さない */
+.oshi-solo .trivia{margin-top:22px}
+.oshi-solo .trivia p{margin:0;font-size:13.5px;line-height:1.85}
+/* アプリ内ブラウザの案内（#64）。警告ほど強くせず、面の明度差で目立たせる */
+.inapp{background:var(--panel2);border:var(--soft-border);border-radius:var(--r-btn);padding:10px 12px;margin:0 0 12px;font-size:13.5px;line-height:1.7;text-align:left}
+.inapp p{margin:0}
+.inapp b{display:block}
+.inapp .btn{margin-top:8px}
+.inapp .small{margin-top:6px}
+/* トップ：退会の完了。主ボタンとの間をあける */
+.top .cta .withdrawn{margin:0 0 10px}
+/* 診断：送信に失敗したときの「もう一度送る」 */
+#diag-retry{margin-top:10px}
+
+/* 対面：一言の下に置く紹介コメント */
+.oshi-solo .oshi-desc{flex:0 0 auto;max-width:90vw;margin:8px auto 0;font-size:13px;line-height:1.7;color:var(--ink);
+  text-align:left;background:var(--panel);border:var(--soft-border);box-shadow:var(--soft-shadow);
+  border-radius:var(--r-card);padding:10px 12px}
+
+/* API設定画面（明色系）。枠・影・角丸は共通トークン */
+.aiset .lead{margin:4px 0 0;line-height:1.7}
+.aiset .card h2{display:flex;align-items:center;gap:10px}
+.aiset .state{margin-left:auto;font-size:11px;letter-spacing:.08em;padding:2px 10px;border:1px dashed var(--dash);border-radius:var(--r-pill);color:var(--muted);font-weight:700}
+.aiset .state.on{color:var(--ok);border-color:var(--ok)}
+.aiset .seg{display:flex;flex-wrap:wrap;gap:8px}
+.aiset .seg label{flex:1 1 0;min-width:96px;margin:0;cursor:pointer}
+.aiset .seg input{position:absolute;opacity:0;pointer-events:none}
+.aiset .seg span{display:block;text-align:center;padding:12px 8px;font-size:14px;font-weight:700;background:#fff;border:var(--soft-border);border-radius:var(--r-btn);color:var(--muted)}
+.aiset .seg small{display:block;margin-top:2px;font-size:11px;font-weight:400;color:var(--muted)}
+.aiset .seg input:checked + span{background:var(--panel2);color:var(--ink);border-color:var(--accent)}
+.aiset .seg input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.aiset .keybox{font-size:17px;font-family:ui-monospace,Menlo,monospace;padding:18px 14px;letter-spacing:.06em}
+.aiset textarea{min-height:120px;line-height:1.6}
+.aiset .save{width:100%;margin-top:22px;padding:14px;font-size:16px;background:var(--accent);color:#fff;border-color:var(--accent)}
+.aiset input,.aiset textarea{box-sizing:border-box;width:100%;max-width:100%}
+.aiset .seg input{width:auto}
+.aiset .keybox{border:var(--soft-border);border-radius:var(--r-btn);background:#fff;color:var(--ink)}
+
+/* ホーム：木のまわりの環境（ヘッダー内・暗色ガラス系。影なし） */
+.env-strip{display:flex;gap:5px;align-items:center;color:rgba(247,237,228,0.6);font-size:11px;text-decoration:none;font-variant-numeric:tabular-nums;white-space:nowrap}
+.env-strip span{display:inline-flex;align-items:center;gap:2px}
+.env-strip svg{color:#F0894A}
+.aiset .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.aiset input[type=number]{font:inherit;padding:12px 10px;border:var(--soft-border);border-radius:var(--r-btn);background:#fff;color:var(--ink);font-size:17px}
+.aiset #env .save{margin-top:14px}
+.aiset form + form{margin-top:0}
+
+/* 設定画面のタブ（CSSのみ）。1画面に収める */
+.aiset h1{margin:0 0 8px}
+.aiset .aitabs > input{position:absolute;opacity:0;pointer-events:none}
+.aiset .tablist{display:flex;gap:4px;padding:4px;background:var(--panel2);border-radius:var(--r-btn)}
+.aiset .tablist label{flex:1;margin:0;text-align:center;padding:9px 4px;font-size:14px;font-weight:700;color:var(--muted);border-radius:calc(var(--r-btn) - 3px);cursor:pointer;position:relative}
+.aiset .dot{display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:var(--ok);vertical-align:middle}
+.aiset .panel{display:none}
+.aiset #tab-key:checked ~ .tablist label[for=tab-key],.aiset #tab-talk:checked ~ .tablist label[for=tab-talk],.aiset #tab-env:checked ~ .tablist label[for=tab-env],.aiset #tab-memory:checked ~ .tablist label[for=tab-memory]{background:var(--panel);color:var(--ink);box-shadow:var(--soft-shadow)}
+.aiset #tab-key:checked ~ .panel[data-tab=key],.aiset #tab-talk:checked ~ .panel[data-tab=talk],.aiset #tab-env:checked ~ .panel[data-tab=env],.aiset #tab-memory:checked ~ .panel[data-tab=memory]{display:block}
+.aiset .aitabs:has(input:focus-visible) .tablist{outline:2px solid var(--accent);outline-offset:2px}
+.aiset .panel .card{margin-top:10px}
+.aiset .lead{margin:0 0 2px;line-height:1.6}
+.aiset .card .f{margin-top:10px}
+.aiset .state{margin-left:8px;font-size:11px;letter-spacing:.06em;padding:1px 8px;border:1px dashed var(--dash);border-radius:var(--r-pill);color:var(--muted);font-weight:700}
+.aiset .state.on{color:var(--ok);border-color:var(--ok)}
+.aiset .btnrow{display:flex;gap:8px;margin-top:14px}
+.aiset .btnrow .btn{flex:1 1 0;padding:12px}
+.aiset .btnrow .save{flex:2 1 0;margin-top:0}
+.aiset .btnrow .save:disabled{opacity:.5}
+.aiset .btn.danger{color:var(--accent)}
+.aiset select{padding:12px 10px;font-size:15px}
+.aiset textarea{min-height:96px}
+.aiset .back{margin:12px 0 0}
+.aiset .head{display:flex;align-items:center;justify-content:flex-start;gap:10px;margin-bottom:8px}
+.aiset .head h1{margin:0}
+.aiset .back-btn{flex-shrink:0;padding:9px 14px;color:var(--ink);text-decoration:none}
+.aiset .back-btn:active{opacity:.85}
+.aiset{padding-top:calc(10px + env(safe-area-inset-top))}
+.aiset .head{margin-bottom:12px}
+.aiset h1{font-size:18px}
+.aiset .back-btn{width:42px;height:42px;padding:0;display:grid;place-items:center}
+/* 保存しました：画面の一番下（下部タブの上）に数秒だけ出す */
+.toast-ok{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:30;max-width:calc(100vw - 32px);
+  padding:10px 22px;border-radius:var(--r-pill);background:var(--ok);color:#fff;font-size:14px;font-weight:700;pointer-events:none;animation:toast-ok 3.2s ease forwards}
+@keyframes toast-ok{0%{opacity:0}8%,80%{opacity:1}100%{opacity:0;visibility:hidden}}
+
+/* ホーム（チャット）を明るくする：診断・結果から切り替えても暗く感じないよう、
+   暗色ガラスをやめて、明色ページと同じ落ち着いた生成り色の面＋墨色の文字にする（明るすぎて浮かないよう、--ground より一段深い色）。レイアウトは変えない */
+.scene-bg svg{filter:blur(7px) saturate(.92) brightness(.98)}
+.home-header{background:rgba(228,214,186,.86);border-bottom:var(--soft-border)}
+.home-header .logo{color:var(--ink)}
+.char-say{background:rgba(236,224,198,.94);color:var(--ink);border:var(--soft-border);box-shadow:var(--soft-shadow)}
+.today .band{background:rgba(228,214,186,.92);color:var(--ink);border-bottom:var(--soft-border)}
+.today .sum{color:var(--accent)}
+.today .sum.all{color:var(--ok)}
+.today .tg{background:rgba(42,33,24,.08)}
+.today .tg.now{background:var(--accent);color:#fff}
+.today .list{background:rgba(236,224,198,.96);color:var(--ink);border-bottom:var(--soft-border)}
+.today .list li + li{border-top:1px dashed var(--dash)}
+.today .list .ck{color:var(--ok)}
+.today .list li.now .tst{color:var(--accent)}
+.home-header .pt{color:var(--ink)}
+.rank-btn .rbar{background:rgba(42,33,24,.18)}
+.rank-btn .rbar i{background:var(--accent)}
+.rank-pop{background:var(--panel);color:var(--ink);border:var(--soft-border);box-shadow:var(--soft-shadow)}
+.rank-pop small{color:var(--muted)}
+.tiles-btn{background:rgba(42,33,24,.10)}
+.tiles-btn svg{fill:var(--ink)}
+/* 明色系ページのヘッダーに置くときは、明色系のトークンにそろえる（/home の暗色ガラスとは混ぜない）。
+   高さは以前のメニューボタン（.menu-btn）と同じ 34px にして、ページの中身を動かさない */
+.bar .tiles-btn{width:38px;height:34px;border:var(--soft-border);border-radius:var(--r-btn);box-shadow:var(--soft-shadow);background:var(--panel)}
+/* トップとそろえたページでは背景に溶け込ませる（ロゴと同じく枠・影なし。以前の .menu-btn と同じ扱い） */
+body[data-plain-bar] .bar .tiles-btn{background:none;border:none;box-shadow:none;width:34px}
+.ai-btn{color:var(--muted)}
+.ai-btn:active{background:rgba(42,33,24,.10)}
+.env-strip{color:var(--muted)}
+.env-strip svg{color:var(--accent)}
+.talk .msg{text-shadow:none;backdrop-filter:blur(9px) saturate(1.1);border:var(--soft-border)}
+.talk .msg.tree{background:rgba(236,224,198,.90);color:var(--ink)}
+.talk .msg.human{background:rgba(226,196,156,.92);color:var(--ink)}
+.talk .msg.tree::before,.talk .msg.human::before{box-shadow:var(--soft-shadow);border:var(--soft-border)}
+.talk .msg.thinking{background:rgba(236,224,198,.64);color:var(--muted)}
+.talk .msg.sys{background:rgba(236,224,198,.88);color:var(--ink)}
+.talk .msg .rep{background:rgba(42,33,24,.10);color:var(--muted)}
+.talk .msg.sys .sh{color:var(--ink);background:var(--panel);border:var(--soft-border)}
+.talk .msg.sys .sh:active{background:var(--dash)}
+.talk .qc{background:rgba(236,224,198,.92);color:var(--ink);border:1px solid var(--accent);text-shadow:none}
+/* 選択肢の箱は .msg の枠と blur を引き継ぐ。中断ボタンは横幅いっぱいでないので隙間から見えてしまう。箱は並べるだけの入れ物にする */
+.talk .msg.choices-in{border:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.talk .qc-pause{justify-self:end;padding:6px 14px;font-size:13px;background:rgba(236,224,198,.92);color:var(--muted);border:var(--soft-border);border-radius:var(--r-btn)}
+.talk .qc-pause:active{opacity:.85}
+.dock{background:rgba(228,214,186,.88);border-top:var(--soft-border)}
+.quiz-btn{background:var(--panel);border:var(--soft-border);color:var(--accent)}
+.quiz-btn:active{background:var(--dash)}
+.quiz-label{color:var(--muted)}
+.dock form{background:var(--panel);border:var(--soft-border)}
+.dock form:focus-within{box-shadow:0 0 0 1.5px var(--accent) inset}
+.dock textarea{color:var(--ink)}
+.dock textarea::placeholder{color:rgba(42,33,24,.45)}
+.dock .send{filter:drop-shadow(0 1px 2px rgba(42,33,24,.25))}
+/* 幅の広い画面で会話画面の左右に出る余白：暗い茶色をやめて、トップなど明色ページと同じ生成りの縦縞にする。
+   黒い大きな影は生成りの上で濁るので、明色ページの影トークンに揃える。レイアウトは変えない */
+body[data-page=home]{background:repeating-linear-gradient(90deg,var(--ground) 0 6px,var(--ground2) 6px 7px)}
+@media (min-width:520px){ .scene{box-shadow:var(--soft-shadow)} }
+
+/* ================= PC（幅1024px以上）=================
+   1023px 以下には一切効かせない。スマホ・タブレットの見た目はこれまでのまま。
+   色・枠・影・角丸は :root のトークンだけを使う。グラデーションは使わない。
+   .pcnav / .page / .top-pc / .top-pc-foot は、ここ以外では display を持たない */
+.pcnav,.top-pc,.top-pc-foot,.pc-side,.pc-note{display:none}
+/* 結果ページを PC で左右に分けるための包み。スマホでは箱を作らない */
+.r-head,.r-body{display:contents}
+/* 遊び方の「毎日できること」のアイコンは PC だけ */
+.manual .defs .ic{display:none}
+/* 本文の枠。スマホでは箱を作らないので（display:contents）、今の積み方と1pxも変わらない */
+.page{display:contents}
+
+@media (min-width:1024px){
+  .wrap{max-width:1120px;padding-left:32px;padding-right:32px}
+  /* PC用の組み方がまだ無いページは、本文をこれまでと同じ幅のまま中央に置く。
+     PC用の組み方ができたページは、そのページだけ max-width を外していく */
+  /* 452px＝これまでの .wrap（480px）から左右の余白 14px ずつを引いた本文の幅 */
+  .page{display:block;max-width:452px;margin:0 auto}
+  body[data-page=top] .page{max-width:none}
+  /* 規約・プライバシーポリシーは表が入るので、読みやすい範囲まで広げる */
+  body[data-page=terms] .page,body[data-page=privacy] .page{max-width:760px}
+  /* 全画面で組むページは、本文の箱を作らない */
+  body[data-page=home] .page,body[data-page=aiset] .page{display:contents}
+  /* 幅広で組むページ（管理画面の .wrap.wide）は、これまでどおり .wrap.wide の幅で組む。本文の箱を作ると 480px に縮む */
+  .wrap.wide{padding-left:14px;padding-right:14px}
+  .wrap.wide .page{display:contents}
+  /* 本文の箱を作らないページのうち、/home 以外（開発者用設定）は、.wrap の幅と余白をこれまでの値（スマホと同じ）に戻す。
+     戻さないと、PC 用に広げた .wrap（1120px）いっぱいに広がる */
+  body[data-page=aiset] .wrap{max-width:480px;padding-left:14px;padding-right:14px}
+
+  /* ---- ヘッダー ---- */
+  /* PC はどのページでもヘッダーを上に固定する。.wrap の左右の余白（32px）ぶん外へ出して、
+     画面の端まで地色で覆う（覆わないと本文がすき間から見える） */
+  .bar,body[data-sticky-bar] .bar{position:sticky;top:0;z-index:30;
+    display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:0;
+    margin:0 -32px;padding:10px 32px;font-size:14px;border-bottom:none;
+    background:repeating-linear-gradient(90deg,var(--ground) 0 6px,var(--ground2) 6px 7px)}
+  /* PC は横並びメニューがあるので、スマホの帯の部品（戻る矢印・ページ名）は出さず、ロゴを戻す。
+     スマホ側の指定（body[data-sticky-bar] .bar .back-btn）のほうが詳細度が高いので、同じ形で打ち消す */
+  body[data-sticky-bar] .bar .back-btn,.bar .back-btn,.bar-title{display:none}
+  body[data-sticky-bar] .bar .logo{display:inline-flex}
+  /* PC は帯にページ名を出さないので、見出しを出す */
+  .admin-title{display:block}
+  /* 幅広で組むページ（管理画面）は .wrap の左右の余白が 14px なので、外へ出す幅もそろえる。
+     32px のままだと、ヘッダーが .wrap からはみ出して横スクロールが出る */
+  .wrap.wide .bar{margin:0 -14px;padding:10px 14px}
+  .logo{background:none;border:none;box-shadow:none;padding:2px 0;font-size:16px;letter-spacing:.12em}
+  .logo svg,.logo img{width:26px;height:26px}
+  /* 4タイルのボタンとヘッダーのログインボタンは、横並びメニューと役割が重なるので出さない */
+  .bar .right{display:none}
+  .pcnav{display:flex;align-items:center;gap:28px;font-size:14px;font-weight:500}
+  .pcnav a{text-decoration:none;color:var(--muted);white-space:nowrap}
+  .pcnav a:hover{color:var(--ink)}
+  /* いま見ている画面 */
+  .pcnav a.on{color:var(--accent);font-weight:700}
+  .pcnav .pc-login{color:var(--panel);background:var(--accent);
+    padding:10px 20px;border-radius:var(--r-btn);font-weight:700}
+  .pcnav .pc-login:hover{color:var(--panel)}
+  .pcnav a:active{opacity:.85}
+
+  /* ---- トップ ---- */
+  /* スマホ用の組み方（背景いっぱいの農園長）はPCでは使わない */
+  .top{display:none}
+  body[data-page=top] .wrap{min-height:100dvh;display:flex;flex-direction:column;padding-bottom:28px}
+  .top-pc{flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:56px;padding:8px 0 32px}
+  /* 絵。縦が短い画面では縮み、入りきらなければページごとスクロールする */
+  .top-pc .art{flex:1 1 420px;min-width:0;display:flex;justify-content:center;align-items:flex-end;
+    height:min(560px,54vh);overflow:hidden;
+    background:var(--panel);border:var(--soft-border);border-radius:var(--r-card);box-shadow:var(--soft-shadow)}
+  .top-pc .art img{width:100%;max-width:520px;height:100%;object-fit:contain;object-position:bottom;display:block}
+  .top-pc .copy{flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:22px}
+  /* 吹き出し。スマホの .bubble と同じく角は落とさない */
+  .top-pc .say{align-self:flex-start;margin:0;padding:12px 22px;font-size:24px;
+    background:var(--panel);border:var(--soft-border);box-shadow:var(--soft-shadow)}
+  .top-pc h1{margin:0;font-size:40px;line-height:1.35;letter-spacing:.04em;font-weight:700}
+  .top-pc .lead{margin:0;font-size:16px;line-height:1.9;color:var(--muted)}
+  .top-pc .tags{display:flex;gap:8px;margin:0}
+  .top-pc .tags span{background:var(--panel);border:var(--soft-border);border-radius:var(--r-pill);
+    padding:4px 14px;font-size:13px;font-weight:700;color:var(--muted)}
+  .top-pc .acts{display:flex;flex-wrap:wrap;gap:12px}
+  .top-pc .btn-main,.top-pc .btn-sub{text-align:center;text-decoration:none;font-weight:700;
+    border-radius:var(--r-btn);padding:18px 24px}
+  /* 主ボタンの文（14文字）が1行に収まるよう、字間を詰めて副ボタンを細くする */
+  .top-pc .btn-main{flex:1 1 280px;background:var(--accent);color:var(--panel);font-size:17px;letter-spacing:.06em;white-space:nowrap}
+  .top-pc .btn-sub{flex:0 1 160px;background:var(--panel);color:var(--ink);font-size:15px;letter-spacing:.08em;white-space:nowrap;
+    border:var(--soft-border);box-shadow:var(--soft-shadow)}
+  .top-pc .btn-main:active,.top-pc .btn-sub:active{opacity:.85}
+  .top-pc .note{margin:0;font-size:13px;color:var(--muted)}
+  .top-pc .withdrawn{margin:0}
+  .top-pc-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;
+    font-size:13px;color:var(--muted)}
+  .top-pc-foot .links{display:flex;gap:20px}
+  .top-pc-foot a{color:inherit;text-decoration:none}
+  .top-pc-foot a:hover{color:var(--ink)}
+
+  /* ---- 遊び方（中央ぞろえのシンプルな形）---- */
+  body[data-page=howto] .page{display:contents}
+  /* 1列の grid にして、行番号で並べ替える（DOM の順はスマホに合わせたまま）。
+     診断ボタンを「あそびかた」の直後に見せ、「画面の見かた」は PC では出さない */
+  .manual{display:grid;grid-template-columns:minmax(0,1fr);row-gap:0}
+  .manual > .hero{grid-row:1;text-align:center;font-size:34px;margin:28px 0 10px}
+  .manual > .toc{grid-row:2;justify-content:center;margin-bottom:10px}
+  .manual > #start{grid-row:3}
+  .manual > .action{grid-row:4;justify-self:center;width:auto;padding:16px 56px;margin:18px 0 0}
+  .manual > #trees{grid-row:5}
+  .manual > #daily{grid-row:6}
+  .manual > #trouble{grid-row:7}
+  /* 画面の見かたはスマホ向けの説明なので PC では出さない。そこへの案内も消す */
+  .manual > #screen,.manual .jump[href="#screen"],.manual .toc a[href="#screen"]{display:none}
+  .manual section{margin-top:44px}
+  /* PC の帯は未ログインでも sticky（上の .bar の指定）なので、ページ内のリンクで飛んだ先が
+     帯の裏に入らないよう、帯の高さ（64px）に 12px 足して空ける。スマホ側の指定は
+     body[data-sticky-bar] 付きで、未ログインの PC には掛からないため、ここでも指定する */
+  .manual section,.manual .defs dt{scroll-margin-top:76px}
+  .manual .sec{text-align:center;border-left:none;padding:0;font-size:19px;letter-spacing:.2em}
+  .manual .lede{text-align:center}
+  /* あそびかた：大きな番号の3ステップを横に */
+  .manual .steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+  .manual .steps li{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:0}
+  .manual .steps li:not(:last-child)::before{display:none}
+  .manual .steps .no{width:52px;height:52px;font-size:24px}
+  .manual .steps p{margin:0;font-size:15px;line-height:1.9}
+  /* 3本の木：3枚を横に */
+  .manual .trio{gap:24px}
+  .manual .trio .t{padding:20px 16px 22px}
+  .manual .trio .art svg{max-width:150px}
+  .manual .trio .nm{font-size:19px;margin:8px 0 4px}
+  .manual .trio .role{font-size:13px}
+  .manual .trio .ct{font-size:14px}
+  .manual .trio .ds{font-size:13.5px;text-align:center}
+  .manual .trio .loc{font-size:12px}
+  /* 毎日できること：アイコン付きで横に並べる。
+     dt・dd の組をそのまま1列ずつ流す（grid-auto-flow:column）ので、項目が増えても列が増える。
+     列を番号で決め打ちすると、項目を足したときに決め打ちの外へこぼれて他の列がつぶれる */
+  .manual #daily .defs{display:grid;grid-template-rows:auto auto;
+    grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);column-gap:28px;margin-top:18px;text-align:center}
+  .manual #daily .defs dt{grid-row:1;padding:0;margin:0;font-size:17px;display:flex;
+    flex-direction:column;align-items:center;gap:8px}
+  .manual #daily .defs dt::before{display:none}
+  .manual #daily .defs .ic{display:inline-flex;color:var(--accent)}
+  .manual #daily .defs dd{grid-row:2;padding:0;margin:10px 0 0;font-size:14px;line-height:1.9}
+  .manual #daily .defs dd::before{display:none}
+  /* こんなときは：質問カードを2列に */
+  .manual .defs.qa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    column-gap:24px;margin-top:18px;text-align:left}
+  .manual .defs.qa dt{margin:18px 0 0;font-size:15px}
+  .manual .defs.qa dd{font-size:14px;line-height:1.9}
+  .manual .defs.qa dt:nth-of-type(odd),.manual .defs.qa dd:nth-of-type(odd){grid-column:1}
+  .manual .defs.qa dt:nth-of-type(even),.manual .defs.qa dd:nth-of-type(even){grid-column:2}
+  .manual .defs.qa dt:nth-of-type(1),.manual .defs.qa dt:nth-of-type(2){grid-row:1}
+  .manual .defs.qa dd:nth-of-type(1),.manual .defs.qa dd:nth-of-type(2){grid-row:2}
+  .manual .defs.qa dt:nth-of-type(3),.manual .defs.qa dt:nth-of-type(4){grid-row:3}
+  .manual .defs.qa dd:nth-of-type(3),.manual .defs.qa dd:nth-of-type(4){grid-row:4}
+  .manual .defs.qa dt:nth-of-type(5),.manual .defs.qa dt:nth-of-type(6){grid-row:5}
+  .manual .defs.qa dd:nth-of-type(5),.manual .defs.qa dd:nth-of-type(6){grid-row:6}
+
+  /* ---- 実績（スクロールなしで画面全体を使う）----
+     左：見守り人の札（全体の高さ）と共有。右上：育ちぐあい。右下：ピンバッジ6個を横一列 */
+  body[data-page=achievements] .page{display:grid;max-width:none;
+    grid-template-columns:minmax(0,420px) minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) auto;
+    /* 105 = ヘッダーと .wrap の上下の余白の合計から詰めた分を引いた値。1画面に収めるための実測値 */
+    gap:14px 32px;min-height:calc(100dvh - 105px);align-content:stretch;padding:4px 0 8px}
+  body[data-page=achievements] .pop{grid-column:1;grid-row:1;margin:0;display:flex;
+    flex-direction:column;justify-content:center;min-height:0;padding:14px 14px 12px}
+  body[data-page=achievements] .pop .code{margin-top:12px}
+  body[data-page=achievements] .pop .name{margin-top:12px}
+  /* 絵は幅を決めて置く（flex の基準を auto にすると、中の svg が width:100% なので潰れる） */
+  body[data-page=achievements] .pop .photo{flex:0 0 150px}
+  body[data-page=achievements] .pop .spec dd{font-size:17px}
+  body[data-page=achievements] .pop-share{grid-column:1;grid-row:2;margin:0}
+  /* 育ちぐあいはピンバッジの上まで伸ばし、ドット絵と文字を上下中央に置く */
+  body[data-page=achievements] .growth{grid-column:2;grid-row:1;margin:0;
+    display:flex;flex-direction:column;min-height:0}
+  body[data-page=achievements] .growth .lcd{flex:1;display:flex;flex-direction:column;justify-content:center}
+  body[data-page=achievements] .growth .stages{max-width:none}
+  /* 小窓が縦に伸びるぶん、いまの段階の絵も大きくする（小窓の高さの半分くらい） */
+  body[data-page=achievements] .growth .nowart{height:clamp(200px,32vh,340px)}
+  body[data-page=achievements] .growth .meter i{width:22px;height:14px}
+  body[data-page=achievements] .card:not(.pop):not(.growth){grid-column:2;grid-row:2;margin:0}
+  /* ピンバッジは横一列 */
+  body[data-page=achievements] .badges{grid-template-columns:repeat(6,minmax(0,1fr))}
+
+  /* ---- 診断（左に育つ木と進み具合、右に問題と選択肢）---- */
+  body[data-page=diagnosis] .page,body[data-page=result] .page{display:contents}
+  .diag{display:grid;overflow:visible;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows:auto auto auto auto;
+    column-gap:56px;align-content:center;padding-bottom:24px}
+  /* 左：育つ木を枠に収める */
+  .diag .grow-area{grid-column:1;grid-row:1 / span 2;height:min(420px,52vh);margin:0;
+    background:var(--panel);border:var(--soft-border);border-radius:var(--r-card);box-shadow:var(--soft-shadow)}
+  .diag .progress{grid-column:1;grid-row:3;margin:14px 0 0}
+  .diag .pc-note{display:block;grid-column:1;grid-row:4;margin:10px 0 0;font-size:13px;color:var(--muted);text-align:center}
+  /* 右：問題と選択肢 */
+  .diag .ask{grid-column:2;grid-row:1;align-self:end;margin:0}
+  .diag .q-text{font-size:26px;line-height:1.5;min-height:0}
+  .diag .choices{grid-column:2;grid-row:2;align-self:start;margin:20px 0 0}
+  .diag-foot{grid-column:2;grid-row:3;margin:14px 0 0;align-items:flex-start}
+  .diag .choice{font-size:16px;padding:18px 20px 18px 52px}
+
+  /* ---- 結果 1画面目（左に持ち味とグラフ、右に本文、下に次への導線）----
+     ヘッダーを除いた高さに収め、「↓ ○○に会いにいく」まで1画面目に入れる */
+  .reading{display:grid;min-height:calc(100dvh - 86px);
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr) auto auto;
+    column-gap:48px;align-content:stretch;padding:4px 0 16px}
+  /* PC では包みを実体のある列にする（スマホでは display:contents のまま） */
+  .reading .r-head{display:flex;grid-column:1;grid-row:1;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;text-align:center;min-height:0}
+  /* 上から 結果 →《タイプ名》→ 円グラフ の順に見せる（DOM の順はスマホに合わせてあるので order で入れ替える） */
+  .reading .r-head .kicker{order:1;margin:0}
+  .reading .r-head h1{order:2;font-size:30px;margin:0}
+  .reading .r-head .donut-box{order:3}
+  .reading .r-body{display:flex;grid-column:2;grid-row:1;flex-direction:column;justify-content:center;
+    gap:12px;min-height:0;overflow:auto}
+  .reading .ratios{flex-direction:column;align-items:center;gap:14px}
+  .reading .donut-svg{width:min(200px,26vh);height:min(200px,26vh)}
+  .reading .donut-legend{flex:0 0 auto;width:100%;max-width:260px}
+  .reading .donut-legend li{font-size:14.5px;padding:2px 0}
+  .reading .part{margin:0}
+  .reading .note{margin:0}
+  .reading .so{grid-column:1 / -1;grid-row:2;text-align:center;margin:16px 0 8px}
+  .reading .wa-btn{grid-column:1 / -1;grid-row:3;justify-self:center;width:auto;padding:15px 56px;margin:0}
+
+  /* ---- 結果 2画面目（左に絵を大きく、右に名前・ひとこと・説明・導線）----
+     1画面目と場面が変わったことが分かるよう、地色を一段深くして横いっぱいに敷く */
+  .oshi-solo{display:grid;min-height:calc(100dvh - 86px);
+    grid-template-columns:minmax(0,1fr) minmax(0,420px);
+    grid-template-rows:repeat(6,auto);
+    column-gap:64px;align-content:center;padding:32px 0;
+    background:var(--ground2);border-top:var(--soft-border);
+    margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);
+    padding-left:calc(50vw - 50% + 32px);padding-right:calc(50vw - 50% + 32px)}
+  /* 100vw はスクロールバーの幅を含むので、幅を取るスクロールバーの環境（Windows など）では
+     横いっぱいに敷いた地色がその分はみ出して横スクロールが出る。はみ出しだけを切る。
+     はみ出しは画面全体のスクロールに出るので、body ではなく html で切る（clip は縦のスクロールを残す） */
+  html:has(body[data-page=result]){overflow-x:clip}
+  /* 箱を作らず、中身をそのまま左右に振り分ける */
+  .oshi-solo .stage{display:contents}
+  .oshi-solo .stage svg{grid-column:1;grid-row:1 / span 6;align-self:center;justify-self:center;
+    width:100%;max-width:520px;max-height:min(520px,66vh)}
+  .oshi-solo .stage .nameplate{grid-column:2;grid-row:1;justify-self:start;align-self:end;
+    font-size:28px;letter-spacing:.14em;margin:0}
+  .oshi-solo .stage .bubble{grid-column:2;grid-row:2;justify-self:start;margin:12px 0 0;
+    font-size:17px;max-width:100%;text-align:left}
+  .oshi-solo .stage .oshi-desc{grid-column:2;grid-row:3;margin:12px 0 0;font-size:15px;line-height:1.9}
+  .oshi-solo .ok-box{grid-column:2;grid-row:4;margin:12px 0 0}
+  .oshi-solo .oshi-cta{grid-column:2;grid-row:5;padding:12px 0 0}
+  .oshi-solo .subnav{justify-content:flex-start}
+  /* 豆知識は「結果を共有する」のすぐ下 */
+  .oshi-solo .trivia{grid-column:2;grid-row:6;margin-top:14px}
+
+  /* ---- ホーム（3列）----
+     左：推し柿・いまの畑・わたしの記録／中央：立ち絵と畑／右：会話と入力欄。
+     スマホの重ね置き（absolute）をやめて grid に組み替える。1画面に収め、
+     縦が足りないときは左右の列だけが内側でスクロールする */
+  /* 520px 以上で「スマホ幅のまま中央に置く」ルール（.scene の max-width:480px）を解いて、
+     画面いっぱいの3列にする */
+  body[data-page=home] .scene{display:grid;max-width:none;margin:0;box-shadow:none;
+    grid-template-columns:260px minmax(0,1fr) 400px;
+    grid-template-rows:auto minmax(0,1fr) auto}
+  /* 上：自前のヘッダーを横いっぱいに。ロゴ・メニュー・スパナだけ残す */
+  /* スマホでは画面に重ねる箱（position:absolute）だが、PC では格子の1行目として高さを持たせる。
+     absolute のままだと1行目の高さが 0 になり、ヘッダーが左の列とトークの列に重なる（#277 のレビュー） */
+  body[data-page=home] .home-top{position:static;grid-area:1/1/2/4}
+  body[data-page=home] .home-header{position:static;padding:12px 28px;gap:20px}
+  body[data-page=home] .home-header .logo{font-size:16px;letter-spacing:.12em}
+  body[data-page=home] .home-header .logo svg,body[data-page=home] .home-header .logo img{width:26px;height:26px}
+  body[data-page=home] .home-header .pcnav{margin-left:auto;gap:6px}
+  body[data-page=home] .home-header .pcnav a{padding:10px 16px;border-radius:var(--r-btn);font-weight:700}
+  body[data-page=home] .home-header .pcnav a.on{background:var(--panel);color:var(--ink)}
+  /* 気温・ポイントは左の列に出すので、ヘッダーからは外す。スパナは今までどおり残す。
+     遊び方・報告・管理画面へは、ヘッダーの横並びのメニューからたどる（#163） */
+  body[data-page=home] .env-strip,body[data-page=home] .home-header .rank-wrap,body[data-page=home] .env-card{display:none}
+  /* 今日のこと（#277）：PC では帯を出さず、左の列のカードに開いた形で出す */
+  body[data-page=home] .today{display:none}
+  body[data-page=home] .scene[data-today=open] .scene-char{transform:none}
+  /* ホームのヘッダーでも、4タイルのボタンは横並びメニューと役割が重なるので出さない */
+  body[data-page=home] .home-header .tiles-btn{display:none}
+  /* 左の列 */
+  .pc-side{display:flex;grid-area:2/1/4/2;flex-direction:column;gap:16px;padding:24px 20px;
+    min-height:0;overflow:auto}
+  .pc-side .card{margin:0;display:flex;flex-direction:column;gap:4px}
+  .pc-side .k{font-size:12px;letter-spacing:.1em;color:var(--muted)}
+  .pc-side .nm{font-size:22px;letter-spacing:.1em}
+  .pc-side .sub{font-size:12.5px;color:var(--muted)}
+  .pc-side .env4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:6px}
+  .pc-side .env4 span{display:block;font-size:11.5px;color:var(--muted)}
+  .pc-side .env4 strong{font-size:18px}
+  .pc-side .kv{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-top:4px}
+  /* 今日のこと（#277） */
+  .pc-side .today-card .sum{font-size:16px;letter-spacing:.06em;color:var(--accent)}
+  .pc-side .today-card .sum.all{color:var(--ok)}
+  .pc-side .today-card .list{list-style:none;margin:8px 0 0;padding:0;font-size:13px}
+  /* 左の列はせまいので、1行目を「チェック・名前・状態」、2行目に時間を置く（3列の格子）。
+     こうすると「いま できる」「終了」がどの行でも1行目の右端にそろう */
+  .pc-side .today-card .list li{display:grid;grid-template-columns:14px minmax(0,1fr) auto;
+    align-items:baseline;column-gap:8px;row-gap:1px;padding:5px 0}
+  .pc-side .today-card .list li + li{border-top:1px dashed var(--dash)}
+  .pc-side .today-card .ck{display:inline-flex;color:var(--ok)}
+  .pc-side .today-card li:not(.done) .ck{visibility:hidden}
+  .pc-side .today-card .tnm{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 2行目（時間とお休みの理由）は、長ければ折り返してよい（名前は折らない） */
+  .pc-side .today-card .tnm small{display:block;font-size:10.5px;color:var(--muted);white-space:normal}
+  .pc-side .today-card .tst{font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .pc-side .today-card li.done{opacity:.55;text-decoration:line-through}
+  .pc-side .today-card li.now .tst{color:var(--accent);font-weight:700}
+  .pc-side .today-card li.missed,.pc-side .today-card li.off{opacity:.55}
+  /* ランク（#275）。ヘッダーには出さず、ここに絵・名前・バー・あと◯pt を出す */
+  .pc-side .rankbox{display:flex;align-items:center;gap:12px;margin-top:6px}
+  .pc-side .rankbox .art{width:64px;height:64px;flex:0 0 auto}
+  .pc-side .rankbox .meta{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 auto}
+  .pc-side .rankbox strong{font-size:17px;letter-spacing:.08em}
+  .pc-side .rankbox .rbar{height:6px;border-radius:var(--r-pill);background:rgba(42,33,24,.14);overflow:hidden}
+  .pc-side .rankbox .rbar i{display:block;height:100%;background:var(--accent);border-radius:var(--r-pill)}
+  .pc-side .rankbox small{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  /* 中央：畑の背景と立ち絵を同じマスに重ねる */
+  body[data-page=home] .scene-bg{position:relative;inset:auto;grid-area:2/2/4/3;overflow:hidden;
+    border-left:var(--soft-border);border-right:var(--soft-border)}
+  body[data-page=home] .scene-bg svg{position:absolute;inset:-24px;width:calc(100% + 48px);height:calc(100% + 48px)}
+  /* 季節の絵も同じだけ外へ出す。ぼかしの端が枠の中に入らないように（枠は overflow:hidden） */
+  body[data-page=home] .scene-bg .scene-photo{inset:-24px}
+  body[data-page=home] .scene-char{position:relative;inset:auto;top:auto;bottom:auto;grid-area:2/2/4/3;
+    display:flex;align-items:flex-end;justify-content:center;padding:0 0 20px;pointer-events:none}
+  /* 絵は .char-tap（押せるボタン、位置は箱いっぱい）の中に入っているので、
+     下づめ・左右中央の並べ方もボタン側に持たせる。これが無いと絵が左上に寄る（#276 のレビュー） */
+  body[data-page=home] .scene-char .char-tap{display:flex;align-items:flex-end;justify-content:center;padding:0 0 20px}
+  body[data-page=home] .scene-char .char-img,body[data-page=home] .scene-char svg{
+    width:auto;max-width:100%;height:min(560px,100%);object-fit:contain;object-position:bottom}
+  /* 右：会話 */
+  body[data-page=home] .talk{position:static;grid-area:2/3/3/4;min-height:0;overflow-y:auto;
+    padding:20px;background:var(--panel);border-left:var(--soft-border)}
+  body[data-page=home] .talk .chat{margin:0;gap:14px}
+  /* 面の上に置くので、すりガラスはやめる */
+  body[data-page=home] .talk .msg{backdrop-filter:none;max-width:300px}
+  body[data-page=home] .talk .msg.tree{max-width:300px}
+  body[data-page=home] .talk .msg.human{max-width:300px}
+  /* 右の下：入力欄 */
+  body[data-page=home] .dock{grid-area:3/3/4/4;margin-top:0;background:var(--panel);
+    border-top:var(--soft-border);border-left:var(--soft-border);padding:14px 20px 18px}
+}
+
+/* 押せる要素の当たり判定を 44px 四方に広げる（#35）。描画される大きさ・位置・レイアウトは変えず、
+   中央に透明な ::before を重ねるだけ。.modal .close と .sheet-close はもとから position:absolute なので、その基準をそのまま使う */
+.quiz-btn,.ai-btn,.tiles-btn{position:relative}
+.quiz-btn::before,.ai-btn::before,.tiles-btn::before,.sheet-close::before,.modal .close::before{
+  content:"";position:absolute;left:calc(50% - 22px);top:calc(50% - 22px);width:44px;height:44px}
+
+/* ===== センサーの記録（/data、#255） =====
+   畑を管理している会社の方と NSK_AIZU のメンバーが見るページ。明色系の共通トークンだけで作る。
+   グラフは外部のライブラリを使わず、サーバーが書いた SVG をそのまま置く */
+.datap{max-width:980px;margin:0 auto}
+.datap h1{font-size:22px;margin:0}
+.datap h2{font-size:16px;margin:18px 0 8px}
+.datap .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px}
+.datap .card{background:var(--panel);border:var(--soft-border);border-radius:var(--r-card);box-shadow:var(--soft-shadow);padding:14px;margin:12px 0}
+.datap .empty{color:var(--muted)}
+
+/* 合言葉の画面。入口を1つだけ置いた、静かな見た目にする */
+.datap.gate{max-width:420px;margin:40px auto;background:var(--panel);border:var(--soft-border);border-radius:var(--r-card);box-shadow:var(--soft-shadow);padding:22px}
+.datap.gate label{display:block;font-weight:700;font-size:13px;margin:14px 0 4px}
+.datap.gate input{width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:var(--soft-border);border-radius:var(--r-btn);background:var(--panel)}
+.datap.gate .action{margin-top:14px}
+
+/* 期間と木の選び方。スマホでは縦、PC では横に並ぶ */
+.datap .pick{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.datap .pick .f{display:flex;flex-direction:column;gap:4px}
+.datap .pick label{font-weight:700;font-size:13px}
+.datap .pick select,.datap .pick input[type=date]{font-size:16px;padding:8px;border:var(--soft-border);border-radius:var(--r-btn);background:var(--panel);color:var(--ink)}
+.datap .pick .trees{display:flex;flex-wrap:wrap;gap:10px;align-items:center;border:var(--soft-border);border-radius:var(--r-btn);padding:8px 12px;margin:0}
+.datap .pick .trees legend{font-weight:700;font-size:12px;color:var(--muted);padding:0 4px}
+.datap .pick .tree{display:inline-flex;align-items:center;gap:5px;font-weight:700;font-size:14px}
+.datap .pick .tree .sw{width:12px;height:12px;border-radius:var(--r-pill);border:var(--soft-border)}
+.datap .pick .action{width:auto;padding:12px 22px;margin:0}
+.datap .pick .note{flex-basis:100%;margin:0;color:var(--muted)}
+
+.datap .clamped{margin:12px 0 0;color:var(--accent);font-weight:700}
+.datap .dl{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.datap .btn{display:inline-block;font-weight:700;font-size:14px;color:var(--ink);background:var(--panel);
+  border:var(--soft-border);border-radius:var(--r-btn);box-shadow:var(--soft-shadow);padding:8px 14px;text-decoration:none;cursor:pointer}
+.datap .btn:active{opacity:.85}
+
+/* グラフ1枚 */
+.datap .chart .ct{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+.datap .chart h2{margin:0}
+.datap .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted)}
+.datap .legend i{display:inline-block;width:10px;height:10px;border-radius:var(--r-pill);margin-right:4px;vertical-align:middle}
+.datap .chart svg{width:100%;height:auto;display:block;margin-top:6px}
+.datap .chart .grid{stroke:var(--dash);stroke-width:1}
+.datap .chart .yl{fill:var(--muted);font-size:11px;text-anchor:end}
+.datap .chart .xl{fill:var(--muted);font-size:11px;text-anchor:middle}
+
+/* 表。狭い画面では横に送れるようにする（本文は横に伸びない） */
+.datap .tw{overflow-x:auto;background:var(--panel);border:var(--soft-border);border-radius:var(--r-card);box-shadow:var(--soft-shadow)}
+.datap table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+.datap th,.datap td{text-align:left;padding:8px 12px;border-bottom:var(--soft-border)}
+.datap th{font-size:12px;color:var(--muted);font-weight:700}
+.datap tr:last-child td{border-bottom:none}
+.datap td.d{white-space:normal;color:var(--muted);font-size:12px}

@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>しゃべる柿の木</title><link rel="stylesheet" href="style.css">
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#e9ece7;
+  --card:#fcfbf6;
+  --line:#e5e7dd;
+  --text:#3d473f;
+  --muted:#6f7a70;
+  --accent:#5f7e72;
+  --accent-soft:#e3ece7;
+}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif}
+main{max-width:480px;margin:auto;background:var(--card);min-height:100dvh;display:flex;flex-direction:column}
+header{padding:18px 22px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:19px}
+small{color:var(--muted)}
+button,input,select{font:inherit}
+button{cursor:pointer;border:0;border-radius:12px;padding:11px 16px;background:var(--accent);color:#fff}
+button.secondary{background:#edf1ec;color:#556459}
+button:disabled{cursor:default;opacity:.45}
+.dev{margin:12px 16px 0;padding:14px;background:#f2f4ef;border:1px solid #dde3da;border-radius:14px}
+.devhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+.dev label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+.dev select{width:100%;min-height:48px;padding:12px 14px;font-size:16px;border-radius:12px;border:1px solid #cfd7cf;background:#fff;color:var(--text)}
+.devbuttons{display:flex;gap:8px;margin-top:10px}
+.devbuttons button{flex:1;min-height:44px}
+.scene{position:relative;margin:16px 16px 0;border-radius:22px;overflow:hidden;background:#dfe9ed}
+.scene svg{display:block;width:100%;height:auto}
+.weather{position:absolute;left:14px;top:12px;background:#ffffffd2;color:#50615a;padding:6px 12px;border-radius:999px;font-size:12px;backdrop-filter:blur(4px)}
+.actions{padding:16px 20px;border-bottom:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.progresscard{margin:10px 0 12px;padding:12px 14px;border:1px solid #e3e8df;border-radius:16px;background:#fafbf8}
+.proglabel{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;color:var(--muted)}
+.track{position:relative;height:12px;border-radius:999px;background:#e6ece6;overflow:hidden}
+.fill{position:absolute;inset:0 auto 0 0;width:0%;background:linear-gradient(90deg,#7aa095,#5f7e72);border-radius:999px}
+.ticks{position:absolute;inset:0;display:grid;grid-template-columns:repeat(10,1fr);gap:4px;padding:2px}
+.ticks i{border-radius:999px;background:transparent;opacity:.35}
+.actions .meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#eef3ef;color:#56655a;font-size:12px}
+.chat{padding:18px 20px;flex:1;min-height:120px;max-height:340px;overflow:auto}
+.bubble{background:#ebeee5;border-radius:4px 16px 16px 16px;padding:10px 14px;margin:0 25px 12px 0;width:fit-content;max-width:90%;white-space:pre-wrap}
+.mine{margin:0 0 12px auto;background:#dde8e3;border-radius:16px 4px 16px 16px}
+form{display:flex;gap:8px;padding:12px 16px}
+input{min-width:0;flex:1;padding:10px 12px;border:1px solid #d8dfd5;border-radius:12px;background:#fff}
+.flake{animation:fall 5s linear infinite}
+.pop{animation:pop .45s ease-out;transform-origin:312px 184px}
+.pulse{animation:pulse .5s ease-out}
+@keyframes fall{from{transform:translateY(-90px)}to{transform:translateY(250px)}}
+@keyframes pop{50%{transform:scale(1.08)}}
+@keyframes pulse{50%{transform:scale(1.05)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* The original site's CSS is loaded above; these rules only arrange the isolated winter screen. */
+body{background:repeating-linear-gradient(90deg,var(--ground) 0 6px,var(--ground2) 6px 7px);color:var(--ink);font-family:'Zen Kaku Gothic New',-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif}
+main.winter-demo{height:auto;min-height:100dvh;max-width:650px;overflow:visible;background:var(--ground);box-shadow:var(--soft-shadow)}
+.home-header{padding:12px 16px;background:var(--bar-bg);border-bottom:var(--soft-border)}.home-header .logo{display:flex;align-items:center;gap:8px;color:var(--ink)}
+.dev{background:var(--panel2);border:var(--soft-border)}.dev select{border:var(--soft-border);color:var(--ink);background:var(--panel)}.devbuttons button{background:var(--panel);border:var(--soft-border);color:var(--ink)}
+.winter-yard{position:relative;margin:12px 12px 0;border-radius:12px;overflow:hidden;background:#dce6e8 url('img/season/winter.webp') center 58%/cover no-repeat}.winter-yard svg{display:block;width:100%;height:auto}.weather{background:var(--panel);color:var(--ink)}
+.actions{padding:10px 14px;border-bottom:var(--soft-border)}.progresscard{background:var(--panel);border:var(--soft-border);padding:8px 12px}.track{background:var(--panel2);height:9px}.fill{background:var(--accent2);transition:width .3s}.pill{background:var(--panel2);color:var(--muted)}#collect{background:var(--accent);color:white}.album-button{background:var(--panel);border:var(--soft-border);color:var(--ink);padding:3px 12px;margin-left:auto}
+.winter-demo .talk{position:relative;inset:auto;min-height:100px;max-height:240px;flex:1;mask-image:none;-webkit-mask-image:none;padding:8px 12px;background:var(--ground)}.winter-demo .talk .chat{margin:0;padding:0;max-height:none;min-height:0;overflow:visible;display:flex;flex-direction:column}.winter-demo .talk .msg{margin-bottom:0}.winter-demo .dock{position:sticky;bottom:0;background:var(--bar-bg)}.winter-demo .dock form{padding:0;gap:2px}.winter-demo .dock .send{background:none;padding:0}.winter-demo .dock textarea{border:none;background:none}.winter-demo dialog{background:var(--panel);color:var(--ink);border:var(--soft-border);border-radius:12px;width:min(420px,92vw)}.winter-demo dialog::backdrop{background:#2a211866}.record{display:flex;align-items:center;gap:12px;border-bottom:var(--soft-border);padding:4px}.record small{display:block}#closeAlbum{background:var(--panel2);color:var(--ink)}
+</style>
+<main class="scene winter-demo" data-slug="a">
+  <header class="home-header">
+    <div>
+      <h1 class="logo"><img id="face" src="img/char-a-icon.png" alt="">しゃべる柿の木</h1>
+      <small>冬の庭</small>
+    </div>
+    <small id="date"></small>
+  </header>
+
+  <section class="dev">
+    <div class="devhead">
+      <strong>開発用設定</strong>
+      <small>天候・日付</small>
+    </div>
+    <label for="character">柿</label><select id="character"><option value="a">A</option><option value="b">B</option><option value="c">C</option></select><label for="snow">天候</label>
+    <select id="snow">
+      <option value="0">曇り・積雪なし（0回）</option><option value="-2">晴れ・暖かい（融解）</option><option value="-3">雨（融解）</option>
+      <option value="1">小雪・少量（1回）</option>
+      <option value="3">雪・積雪あり（3回）</option>
+      <option value="5" selected>大雪・積雪多め（5回）</option>
+    </select>
+    <div class="devbuttons">
+      <button type="button" class="secondary" id="next">翌日へ</button>
+      <button type="button" class="secondary" id="reset">リセット</button>
+    </div>
+  </section>
+
+  <div class="winter-yard">
+    <svg viewBox="0 0 400 250" aria-label="雪の庭と成長する雪だるま">
+      <rect width="400" height="250" fill="transparent"/>
+      
+
+      <g id="tree" transform="translate(-2 10) scale(.88)">
+        <g stroke="#79634f" stroke-linecap="round" fill="none">
+          <path d="M123 196Q128 142 120 92L117 57" stroke-width="15"/>
+          <path d="M124 137L80 104 58 69M122 118L169 79 180 47M120 94L95 57 91 32M143 99L154 51M82 105L46 101M165 81L199 70" stroke-width="8"/>
+          <path d="M58 69L40 47M58 69L65 43M180 47L202 34M95 57L76 45" stroke-width="4"/>
+        </g>
+        <g id="treeSnow" stroke="#fbfcfc" stroke-width="8" stroke-linecap="round" fill="none">
+          <path d="M46 96L78 99M61 65L80 91M151 86L167 73M173 56L180 44M94 52L117 84M184 70L199 65"/>
+        </g>
+      </g>
+
+      <g id="groundPile" transform="translate(0 0)"></g>
+      <g id="snowmanShadow"><ellipse cx="313" cy="213" rx="49" ry="8" fill="#9db2bb" opacity=".22"/></g>
+      <g id="snowman"></g>
+      <g id="effect"></g>
+      <g id="flakes"></g>
+
+      <g id="kakiChar"><image id="characterArt" href="img/char-a.png" x="126" y="49" width="148" height="148"/></g>
+    </svg>
+    <span class="weather" id="weather"></span>
+  </div>
+
+  <section class="actions">
+    <div class="row">
+      <strong>雪だるま</strong><button class="album-button" id="album" type="button">図鑑</button>
+      <small id="progress"></small>
+    </div>
+    <div class="progresscard">
+      <div class="proglabel">
+        <span>完成まで</span>
+        <span id="progressText">0 / 10</span>
+      </div>
+      <div class="track" aria-hidden="true">
+        <div class="fill" id="fill"></div>
+        <div class="ticks" id="ticks"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="meta">
+        <span class="pill" id="remaining"></span>
+        <span class="pill" id="snowInfo"></span>
+      </div>
+      <button id="collect" type="button">雪を集める</button>
+    </div>
+  </section>
+
+  <div class="talk" id="chat-pane"><div class="chat" id="chat" aria-live="polite">
+    <div class="msg tree">寒くなったね。雪が積もったら、一緒に雪だるまを作ってみない？</div>
+  </div></div>
+
+  <div class="dock"><form id="form">
+    <textarea id="message" rows="1" maxlength="200" placeholder="柿に話しかける…" aria-label="柿に話しかける"></textarea>
+    <button class="send" type="submit" aria-label="送る">
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <ellipse cx="24" cy="28" rx="17.5" ry="15.5" fill="#E8712C" stroke="#33291C" stroke-width="2.4" />
+            <path d="M24 14c-6.5-4.2-11.5-2.2-13.5 2 5.2 1 9.4 1 13.5-2zm0 0c6.5-4.2 11.5-2.2 13.5 2-5.2 1-9.4 1-13.5-2z" fill="#5F7F3C" stroke="#33291C" stroke-width="1.8" stroke-linejoin="round" />
+            <path d="M24 7.5v6.5" stroke="#5F7F3C" stroke-width="3.4" stroke-linecap="round" />
+            <path d="M24 20.5l7 7.5h-3.8v7.5h-6.4v-7.5h-3.8z" fill="#FFF7EA" stroke="#33291C" stroke-width="1.6" stroke-linejoin="round" />
+          </svg>
+        </button>
+  </form></div>
+<dialog id="collection"><div class="row"><strong>雪だるま図鑑</strong><button id="closeAlbum" type="button">閉じる</button></div><div id="records"></div><p id="stats"></p></dialog></main>
+
+<script>
+const $ = id => document.getElementById(id);
+const key = 'kaki-winter-native-v1';
+const day = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(new Date());
+const fresh = () => ({ total: 0, used: 0, date: day(), offset: 0, snow: 5, character: "a", variant: -1, records: [], gathered: 0, completedOn: null });
+let state = fresh();
+try {
+  const s = JSON.parse(localStorage.getItem(key));
+  if (s && Number.isInteger(s.total) && s.total >= 0 && s.total <= 10 && Number.isInteger(s.used) && s.used >= 0 && s.used <= 5 && [-3,-2,0,1,3,5].includes(s.snow)) {
+    state = { ...state, ...s };
+  }
+} catch {}
+
+function today() {
+  const d = new Date(day() + 'T12:00:00+09:00');
+  d.setUTCDate(d.getUTCDate() + state.offset);
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(d);
+}
+function roll() {
+  if (state.date !== today()) {
+    if(state.variant>=0 && state.total>0 && state.snow<=0){state.total=Math.max(0,state.total-(state.snow===-3?4:state.snow===-2?3:1));if(!state.total){state.variant=-1;state.completedOn=null;}}
+    state.date = today();
+    state.used = 0;
+  }
+}
+function save() {
+  try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
+}
+function say(text, mine = false) {
+  const e = document.createElement('div');
+  e.className = 'msg ' + (mine ? 'human' : 'tree');
+  e.textContent = text;
+  $('chat').append(e);
+  $('chat-pane').scrollTop = $('chat-pane').scrollHeight;
+}
+function ball(x,y,rx,ry){
+  return `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fcfdfd" stroke="#c4d3d9" stroke-width="2"/><path d="M${x-rx*.55} ${y-ry*.35}q${rx*.15} ${-ry*.45} ${rx*.55} ${-ry*.45}" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"/>`;
+}
+function drawSnowman(n){
+  let a = '';
+  if (n > 0) {
+    const r = Math.min(38, 12 + n * 6.4);
+    a += ball(312, 206 - r * .84, r, r * .84);
+  }
+  if (n >= 5) {
+    const r = Math.min(25, 10 + (n - 5) * 4.5);
+    a += ball(312, 136 - r * .62, r, r);
+  }
+  if (n >= 8) {
+    a += '<circle cx="302" cy="110" r="3" fill="#47545a"/><circle cx="321" cy="110" r="3" fill="#47545a"/><path d="M312 116l15 4-15 4z" fill="#d58d50"/>';
+  }
+  if (n >= 9) {
+    a += '<path d="M278 162l-28-23m12 10-4-15m82 28 28-23m-12 10 4-15" stroke="#79634f" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="312" cy="166" r="3" fill="#526268"/><circle cx="312" cy="181" r="3" fill="#526268"/>';
+  }
+  if (n === 10) {
+    a += '<path d="M287 132q25 8 50 0v10q-25 8-50 0zM322 141l11 24 9-5-11-24" fill="#a65e49"/>';
+  }
+  return a;
+}
+const names=['ふつう','ニット帽','くま','うさぎ','柿だるま'];
+function accessory(v){return ['', '<path d="M290 100v-13q22-26 44 0v13z" fill="#658a9f"/><circle cx="312" cy="78" r="5" fill="#658a9f"/>','<circle cx="292" cy="88" r="9" fill="#fff" stroke="#c4d3d9"/><circle cx="332" cy="88" r="9" fill="#fff" stroke="#c4d3d9"/>','<ellipse cx="300" cy="78" rx="7" ry="19" fill="#fff" stroke="#c4d3d9"/><ellipse cx="324" cy="78" rx="7" ry="19" fill="#fff" stroke="#c4d3d9"/>','<ellipse cx="312" cy="85" rx="17" ry="11" fill="#e99845"/><path d="M300 77q12-9 24 0q-12 7-24 0" fill="#71845a"/>'][v]||'';}
+function drawGroundPile(ratio) {
+  if (!ratio) return '';
+  const rx = 38 * ratio;
+  const ry = 16 * ratio;
+  const x = 150;
+  const y = 205;
+  return `
+    <ellipse cx="${x}" cy="${y+4}" rx="${rx+4}" ry="${ry}" fill="#b3c2c8" opacity=".22"/>
+    <ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="#fbfcfc" stroke="#cfdae0" stroke-width="1.5"/>
+    <path d="M${x-rx*.55} ${y-ry*.15}q${rx*.25} ${-ry*.7} ${rx*.62} ${-ry*.45}" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  `;
+}
+function drawFlakes(snow) {
+  return Array.from({ length: snow * 3 }, (_, i) =>
+    `<circle class="flake" cx="${(i * 73 + 21) % 400}" cy="${(i * 39) % 230 - 70}" r="${1 + (i % 3) * .6}" fill="white" style="animation-delay:-${i * .71}s"/>`
+  ).join('');
+}
+function render() {
+  roll();
+  const n = state.total;
+  $("character").value=state.character; document.querySelector("main").dataset.slug=state.character; $("face").src=`img/char-${state.character}-icon.png`; $("characterArt").setAttribute("href",`img/char-${state.character}.png`);
+  const left = Math.max(0, state.snow - state.used);
+  const ratio = state.snow>0 ? left / 5 : 0;
+  $('date').textContent = state.date.slice(5).replace('-', '/');
+  $('snow').value = String(state.snow);
+  $('weather').textContent = ({'-3':'雨 · 融解','-2':'晴れ · 融解',0:'曇り · 積雪なし',1:'小雪 · うっすら積雪',3:'雪 · 積雪あり',5:'雪 · たっぷり積雪'})[state.snow];
+  $('progress').textContent = n + ' / 10';
+  $('progressText').textContent = n + ' / 10';
+  $('fill').style.width = (n * 10) + '%';
+  $('ticks').innerHTML = Array.from({length:10}, (_,i) => `<i style="background:${i < n ? 'rgba(255,255,255,.34)' : 'transparent'}"></i>`).join('');
+  $('remaining').textContent = n === 10 ? '完成しました' : `今日あと ${left} 回`;
+  $('snowInfo').textContent = `積雪 ${Math.max(0,state.snow)} / 5`;
+  $('collect').disabled = !left || n === 10;
+  $('collect').textContent = n === 10 ? '完成' : left ? (state.variant>=0?'雪だるまを直す':'雪を集める') : '今日はおしまい';
+
+  $('treeSnow').style.opacity = ratio ? Math.max(.12, ratio) : 0;
+  $('groundPile').innerHTML = drawGroundPile(ratio);
+  $('snowman').innerHTML = state.variant>=0 ? `<g transform="translate(0 ${206*(1-n/10)}) scale(1 ${n/10})">${drawSnowman(10)}${accessory(state.variant)}</g>` : drawSnowman(n);
+  $('flakes').innerHTML = drawFlakes(Math.max(0,state.snow));
+  save();
+}
+
+$('collect').onclick = () => {
+  roll();
+  if (state.used >= state.snow || state.total >= 10) {
+    render();
+    return;
+  }
+  state.used++;
+  state.total++; state.gathered++;
+  if(state.total===10 && state.variant<0){const r=Math.random();state.variant=r<.3?0:r<.55?1:r<.75?2:r<.9?3:4;state.records.push({variant:state.variant,date:state.date});state.completedOn=state.date;}
+  render();
+
+  $('snowman').classList.remove('pop');
+  void $('snowman').getBoundingClientRect();
+  $('snowman').classList.add('pop');
+
+  const fromX = state.used % 2 ? 150 : 104;
+  const fromY = state.used % 2 ? 202 : 104;
+  $('effect').innerHTML = `
+    <circle r="5" fill="white" stroke="#bfd1d8">
+      <animateMotion dur=".48s" path="M${fromX} ${fromY} Q250 68 312 162" fill="freeze"/>
+      <animate attributeName="opacity" from="1" to="0" dur=".48s" fill="freeze"/>
+    </circle>`;
+
+  const lines = {
+    1:'最初の雪が集まってきたね。',
+    5:'体がしっかりしてきたね。',
+    8:'顔が見えてきたよ。',
+    10:'できた！ きれいな雪だるまになったね。'
+  };
+  if (lines[state.total]) say(lines[state.total]);
+  else if (state.used === state.snow) say('今日はここまで。また雪が積もったら続きを作ろう。');
+};
+
+$('character').onchange=e=>{state.character=e.target.value;render()};
+$('album').onclick=()=>{ $('records').innerHTML=names.map((name,i)=>{const count=state.records.filter(r=>r.variant===i).length;return `<div class="record"><svg viewBox="245 55 135 160" style="width:65px;opacity:${count?1:.2}">${drawSnowman(10)}${accessory(i)}</svg><span>${count?name:'未発見'}<small>${count}体</small></span></div>`}).join(''); $('stats').textContent=`完成 ${state.records.length}体　雪集め ${state.gathered}回`; $('collection').showModal();}; $('closeAlbum').onclick=()=>$('collection').close();
+$('snow').onchange = e => {
+  state.snow = Number(e.target.value);
+  render();
+};
+$('next').onclick = () => {
+  const before=state.total; state.offset++;
+  render(); if(state.total<before)say(state.total?'雪だるま、少し溶けたみたい。':'また雪が降ったら作ろうね。');
+  say('おはよう。今日の雪を見てみようか。');
+};
+$('reset').onclick = () => {
+  state = fresh();
+  $('chat').replaceChildren();
+  say('寒くなったね。雪が積もったら、一緒に雪だるまを作ってみない？');
+  render();
+};
+$('form').onsubmit = e => {
+  e.preventDefault();
+  const t = $('message').value.trim();
+  if (!t) return;
+  say(t, true);
+  $('message').value = '';
+  say(state.total === 10 ? '雪だるまも喜んでる気がするね。' : '冬の庭も、こうして一緒に過ごすと楽しいね。');
+};
+
+render();
+setInterval(() => { if (state.date !== today()) render(); }, 30000);
+</script>
+</html>
